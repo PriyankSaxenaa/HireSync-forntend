@@ -9,7 +9,7 @@ import { useAuth } from "../../hooks/useAuth";
 
 const roleHome = {
   admin: "/admin/dashboard",
-  recruiter: "/",
+  recruiter: "/recruiter/dashboard",
   tpo: "/",
   candidate: "/",
 };

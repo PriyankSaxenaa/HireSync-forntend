@@ -14,6 +14,12 @@ import Users from "./pages/dashboard/Users";
 import Jobs from "./pages/dashboard/Jobs";
 import Colleges from "./pages/dashboard/Colleges";
 
+import RecruiterLayout from "./layouts/RecruiterLayout";
+import RecruiterDashboard from "./pages/recruiter/RecruiterDashboard";
+import RecruiterJobs from "./pages/recruiter/RecruiterJobs";
+import JobApplicants from "./pages/recruiter/JobApplicants";
+
+
 function App() {
   return (
     <AuthProvider>
@@ -31,6 +37,15 @@ function App() {
                 <Route path="users" element={<Users />} />
                 <Route path="jobs" element={<Jobs />} />
                 <Route path="colleges" element={<Colleges />} />
+              </Route>
+            </Route>
+
+            <Route element={<RoleGuard allow={["recruiter"]} />}>
+              <Route path="/recruiter" element={<RecruiterLayout />}>
+                <Route index element={<RecruiterDashboard />} />
+                <Route path="dashboard" element={<RecruiterDashboard />} />
+                <Route path="jobs" element={<RecruiterJobs />} />
+                <Route path="jobs/:jobId/applicants" element={<JobApplicants />} />
               </Route>
             </Route>
           </Route>
