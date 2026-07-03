@@ -1,139 +1,175 @@
-import { motion } from "framer-motion";
-import { Menu } from "lucide-react";
+// src/components/common/Navbar.jsx
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { Menu, X } from "lucide-react";
 import Logo from "./Logo";
+
 const navLinks = [
-  { name: "Features", href: "#" },
-  { name: "About", href: "#" },
-  { name: "Contact", href: "#" },
+  { name: "Features", href: "#features" },
+  { name: "About", href: "#about" },
+  { name: "Contact", href: "#contact" },
 ];
 
 const Navbar = () => {
+  const [open, setOpen] = useState(false);
+
   return (
-    <motion.header
-      initial={{ y: -80, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.7 }}
-      className="fixed top-0 left-0 z-50 w-full px-4 py-5"
-    >
+    <header style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 50, padding: "16px" }}>
       <div
-        className="
-        mx-auto
-        flex
-        max-w-7xl
-        items-center
-        justify-between
-        rounded-2xl
-        border
-        border-white/10
-        bg-white/5
-        px-6
-        py-4
-        shadow-[0_8px_40px_rgba(0,0,0,.35)]
-        backdrop-blur-2xl
-      "
+        style={{
+          maxWidth: "1280px",
+          margin: "0 auto",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "14px 24px",
+          borderRadius: "16px",
+          border: "1px solid rgba(255,255,255,0.1)",
+          background: "rgba(15,23,42,0.7)",
+          backdropFilter: "blur(16px)",
+          WebkitBackdropFilter: "blur(16px)",
+          boxShadow: "0 8px 32px rgba(0,0,0,0.45)",
+        }}
       >
-        <Logo />
+        <Link to="/" style={{ display: "flex", flexShrink: 0 }}>
+          <Logo />
+        </Link>
 
-        {/* Desktop Menu */}
-
-        <nav className="hidden items-center gap-10 lg:flex">
+        {/* Desktop nav links */}
+        <nav
+          style={{
+            display: "none",
+            alignItems: "center",
+            gap: "40px",
+          }}
+          className="lg:flex"
+        >
           {navLinks.map((item) => (
             <a
               key={item.name}
               href={item.href}
-              className="
-                relative
-                text-sm
-                font-medium
-                text-slate-300
-                transition
-                duration-300
-                hover:text-white
-                after:absolute
-                after:left-0
-                after:-bottom-1
-                after:h-[2px]
-                after:w-0
-                after:bg-gradient-to-r
-                after:from-pink-500
-                after:via-violet-500
-                after:to-cyan-400
-                after:transition-all
-                hover:after:w-full
-              "
+              style={{ fontSize: "14px", fontWeight: 500, color: "#cbd5e1", textDecoration: "none" }}
             >
               {item.name}
             </a>
           ))}
         </nav>
 
-        {/* Right Buttons */}
-
-        <div className="hidden items-center gap-4 lg:flex">
-          <button
-            className="
-              rounded-full
-              border
-              border-white/10
-              bg-white/10
-              px-6
-              py-2.5
-              text-sm
-              font-semibold
-              text-white
-              backdrop-blur-xl
-              transition
-              duration-300
-              hover:bg-white/20
-            "
+        {/* Desktop buttons */}
+        <div style={{ display: "none", alignItems: "center", gap: "12px" }} className="lg:flex">
+          <Link
+            to="/login"
+            style={{
+              border: "1px solid rgba(255,255,255,0.15)",
+              borderRadius: "9999px",
+              padding: "10px 24px",
+              fontSize: "14px",
+              fontWeight: 600,
+              color: "#fff",
+            }}
           >
             Login
-          </button>
-
-          <button
-            className="
-              rounded-full
-              bg-gradient-to-r
-              from-pink-500
-              via-violet-500
-              to-cyan-400
-              px-6
-              py-2.5
-              text-sm
-              font-semibold
-              text-white
-              shadow-lg
-              transition
-              duration-300
-              hover:scale-105
-            "
+          </Link>
+          <Link
+            to="/register"
+            style={{
+              borderRadius: "9999px",
+              padding: "10px 24px",
+              fontSize: "14px",
+              fontWeight: 600,
+              color: "#fff",
+              background: "linear-gradient(to right, #6366f1, #22d3ee)",
+              boxShadow: "0 0 25px rgba(99,102,241,0.45)",
+            }}
           >
             Register
-          </button>
+          </Link>
         </div>
 
-        {/* Mobile */}
-
+        {/* Mobile toggle */}
         <button
-          className="
-            flex
-            h-11
-            w-11
-            items-center
-            justify-center
-            rounded-full
-            border
-            border-white/10
-            bg-white/10
-            text-white
-            backdrop-blur-xl
-            lg:hidden
-          "
+          onClick={() => setOpen((o) => !o)}
+          aria-label="Toggle menu"
+          className="lg:hidden"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: "40px",
+            height: "40px",
+            borderRadius: "9999px",
+            border: "1px solid rgba(255,255,255,0.15)",
+            background: "rgba(255,255,255,0.05)",
+            color: "#fff",
+          }}
         >
-          <Menu size={22} />
+          {open ? <X size={20} /> : <Menu size={20} />}
         </button>
       </div>
-    </motion.header>
+
+      {/* Mobile menu */}
+      {open && (
+        <div
+          className="lg:hidden"
+          style={{
+            maxWidth: "1280px",
+            margin: "12px auto 0",
+            borderRadius: "16px",
+            border: "1px solid rgba(255,255,255,0.1)",
+            background: "rgba(15,23,42,0.9)",
+            backdropFilter: "blur(16px)",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.45)",
+            padding: "24px",
+          }}
+        >
+          <nav style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            {navLinks.map((item) => (
+              <a
+                key={item.name}
+                href={item.href}
+                onClick={() => setOpen(false)}
+                style={{ fontSize: "15px", fontWeight: 500, color: "#cbd5e1", textDecoration: "none" }}
+              >
+                {item.name}
+              </a>
+            ))}
+          </nav>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "24px" }}>
+            <Link
+              to="/login"
+              onClick={() => setOpen(false)}
+              style={{
+                borderRadius: "9999px",
+                border: "1px solid rgba(255,255,255,0.15)",
+                padding: "12px",
+                textAlign: "center",
+                fontSize: "14px",
+                fontWeight: 600,
+                color: "#fff",
+              }}
+            >
+              Login
+            </Link>
+            <Link
+              to="/register"
+              onClick={() => setOpen(false)}
+              style={{
+                borderRadius: "9999px",
+                padding: "12px",
+                textAlign: "center",
+                fontSize: "14px",
+                fontWeight: 600,
+                color: "#fff",
+                background: "linear-gradient(to right, #6366f1, #22d3ee)",
+              }}
+            >
+              Register
+            </Link>
+          </div>
+        </div>
+      )}
+    </header>
   );
 };
 

@@ -1,3 +1,4 @@
+/* src/styles/globals.css */
 @import "tailwindcss";
 
 *{
@@ -11,7 +12,7 @@ html{
 }
 
 body{
-    background:#050816;
+    background:#040611;
     color:white;
     overflow-x:hidden;
     font-family:Inter,sans-serif;
@@ -26,11 +27,21 @@ button{
 }
 
 ::-webkit-scrollbar-thumb{
-    background:#8B5CF6;
+    background:#6366f1;
     border-radius:999px;
 }
 
 ::selection{
-    background:#8B5CF6;
+    background:#6366f1;
     color:white;
+}
+
+/* Kill Chrome's white autofill background so inputs stay dark-themed
+   (this was the cause of the overlapping/merged-looking fields) */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+    -webkit-text-fill-color: #fff;
+    -webkit-box-shadow: 0 0 0px 1000px rgba(0,0,0,0.3) inset;
+    transition: background-color 9999s ease-in-out 0s;
 }
