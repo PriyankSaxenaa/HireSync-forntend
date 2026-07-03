@@ -5,11 +5,20 @@ import toast from "react-hot-toast";
 import { loginUser } from "../../api/auth.api";
 import AuthLayout from "../../layouts/AuthLayout";
 import { FormField, inputStyle } from "../../components/forms/FormField";
+import { useAuth } from "../../hooks/useAuth";
+
+const roleHome = {
+  admin: "/admin/dashboard",
+  recruiter: "/",
+  tpo: "/",
+  candidate: "/",
+};
 
 const Login = () => {
   const [form, setForm] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
@@ -19,7 +28,8 @@ const Login = () => {
     try {
       const { data } = await loginUser(form);
       toast.success(data.message || "Logged in successfully");
-      navigate("/");
+      login(data.user); // populate AuthContext + sessionStorage
+      navigate(roleHome[data.user.role] || "/");
     } catch (err) {
       toast.error(err.response?.data?.message || "Login failed");
     } finally {
