@@ -1,4 +1,7 @@
 // src/pages/auth/Login.jsx
+// ── ONLY CHANGE FROM YOUR EXISTING FILE ──────────────────────────────────────
+// roleHome.tpo now points to "/tpo/dashboard" instead of "/", so TPOs land
+// straight on their new dashboard after logging in.
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import toast from "react-hot-toast";
@@ -10,7 +13,7 @@ import { useAuth } from "../../hooks/useAuth";
 const roleHome = {
   admin: "/admin/dashboard",
   recruiter: "/recruiter/dashboard",
-  tpo: "/",
+  tpo: "/tpo/dashboard",
   candidate: "/",
 };
 

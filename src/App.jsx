@@ -19,6 +19,13 @@ import RecruiterDashboard from "./pages/recruiter/RecruiterDashboard";
 import RecruiterJobs from "./pages/recruiter/RecruiterJobs";
 import JobApplicants from "./pages/recruiter/JobApplicants";
 
+import TPOLayout from "./layouts/TPOLayout";
+import TPODashboard from "./pages/tpo/TPODashboard";
+import TPOStudents from "./pages/tpo/TPOStudents";
+import TPOPlacementGroups from "./pages/tpo/TPOPlacementGroups";
+import TPODrives from "./pages/tpo/TPODrives";
+import TPOCollegeSetup from "./pages/tpo/TPOCollegeSetup";
+
 
 function App() {
   return (
@@ -46,6 +53,17 @@ function App() {
                 <Route path="dashboard" element={<RecruiterDashboard />} />
                 <Route path="jobs" element={<RecruiterJobs />} />
                 <Route path="jobs/:jobId/applicants" element={<JobApplicants />} />
+              </Route>
+            </Route>
+
+            <Route element={<RoleGuard allow={["tpo"]} />}>
+              <Route path="/tpo" element={<TPOLayout />}>
+                <Route index element={<TPODashboard />} />
+                <Route path="dashboard" element={<TPODashboard />} />
+                <Route path="students" element={<TPOStudents />} />
+                <Route path="placement-groups" element={<TPOPlacementGroups />} />
+                <Route path="drives" element={<TPODrives />} />
+                <Route path="college" element={<TPOCollegeSetup />} />
               </Route>
             </Route>
           </Route>
