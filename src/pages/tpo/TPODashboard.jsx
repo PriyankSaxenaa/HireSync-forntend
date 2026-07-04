@@ -11,12 +11,11 @@ import {
   Plus,
   Users2,
   ArrowRight,
-  ShieldCheck,
-  ShieldAlert,
   Sparkles,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import ColorBends from "../../components/common/ColorBends";
+import CollegeGateNotice from "../../components/tpo/CollegeGateNotice";
 import { getTpoAnalytics, getStudents, getDrives } from "../../api/tpo.api";
 
 // ── small helpers ────────────────────────────────────────────────────────────
@@ -97,7 +96,8 @@ const StatCard = ({ icon: Icon, label, value, gradient, delay = 0, suffix = "" }
 
 const TPODashboard = () => {
   const [loading, setLoading] = useState(true);
-  const [noCollege, setNoCollege] = useState(false);
+  // null = accessible, "none" = no college registered, "unverified" = registered but not verified
+  const [gateStatus, setGateStatus] = useState(null);
   const [analytics, setAnalytics] = useState(null);
   const [studentCount, setStudentCount] = useState(0);
   const [drives, setDrives] = useState([]);
@@ -111,11 +111,13 @@ const TPODashboard = () => {
           getDrives(),
         ]);
 
-        const noCollegeErr = [analyticsRes, studentsRes, drivesRes].find(
-          (r) => r.status === "rejected" && r.reason?.response?.status === 404
-        );
-        if (noCollegeErr && [analyticsRes, studentsRes, drivesRes].every((r) => r.status === "rejected")) {
-          setNoCollege(true);
+        const results = [analyticsRes, studentsRes, drivesRes];
+        const allFailed = results.every((r) => r.status === "rejected");
+
+        if (allFailed) {
+          const status = results[0].reason?.response?.status;
+          if (status === 403) setGateStatus("unverified");
+          else setGateStatus("none");
           return;
         }
 
@@ -143,58 +145,8 @@ const TPODashboard = () => {
     return <p style={{ color: "#a897c9" }}>Loading your placement cell...</p>;
   }
 
-  if (noCollege) {
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        style={{
-          background: "#170f28",
-          border: "1px dashed rgba(216,180,254,0.25)",
-          borderRadius: "24px",
-          padding: "60px 30px",
-          textAlign: "center",
-        }}
-      >
-        <div
-          style={{
-            width: "64px",
-            height: "64px",
-            margin: "0 auto 20px",
-            borderRadius: "18px",
-            background: "linear-gradient(135deg,#8b5cf6,#d946ef)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <ShieldAlert size={28} color="#fff" />
-        </div>
-        <h2 style={{ margin: "0 0 8px", fontSize: "20px", fontWeight: 800, color: "#fff" }}>
-          Register your college to get started
-        </h2>
-        <p style={{ margin: "0 0 24px", fontSize: "14px", color: "#a897c9", maxWidth: "420px", marginLeft: "auto", marginRight: "auto" }}>
-          Every TPO account manages exactly one college. Register it once, and an admin will verify it before you can post drives.
-        </p>
-        <Link
-          to="/tpo/college"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "8px",
-            borderRadius: "999px",
-            padding: "12px 26px",
-            fontSize: "14px",
-            fontWeight: 700,
-            color: "#fff",
-            background: "linear-gradient(to right,#8b5cf6,#d946ef)",
-            textDecoration: "none",
-          }}
-        >
-          Register College <ArrowRight size={16} />
-        </Link>
-      </motion.div>
-    );
+  if (gateStatus) {
+    return <CollegeGateNotice status={gateStatus} />;
   }
 
   return (

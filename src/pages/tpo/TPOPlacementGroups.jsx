@@ -12,6 +12,7 @@ import {
   removeStudentFromGroup,
 } from "../../api/placementGroups.api";
 import { getStudents } from "../../api/tpo.api";
+import CollegeGateNotice from "../../components/tpo/CollegeGateNotice";
 
 const inputStyle = {
   width: "100%",
@@ -29,6 +30,7 @@ const TPOPlacementGroups = () => {
   const [groups, setGroups] = useState([]);
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [gateStatus, setGateStatus] = useState(null); // null | "none" | "unverified"
   const [createOpen, setCreateOpen] = useState(false);
   const [form, setForm] = useState({ name: "", description: "" });
   const [submitting, setSubmitting] = useState(false);
@@ -40,7 +42,10 @@ const TPOPlacementGroups = () => {
       const { data } = await getPlacementGroups();
       setGroups(data.groups || []);
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to load groups");
+      const status = err.response?.status;
+      if (status === 403) setGateStatus("unverified");
+      else if (status === 404) setGateStatus("none");
+      else toast.error(err.response?.data?.message || "Failed to load groups");
     }
   };
 
@@ -128,6 +133,10 @@ const TPOPlacementGroups = () => {
   const availableStudents = students.filter(
     (s) => !activeGroup?.group?.students?.some((m) => m._id === s._id)
   );
+
+  if (gateStatus) {
+    return <CollegeGateNotice status={gateStatus} />;
+  }
 
   return (
     <div>

@@ -1,6 +1,5 @@
 // src/pages/tpo/TPODrives.jsx
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import {
@@ -10,7 +9,6 @@ import {
   CalendarClock,
   Download,
   ChevronDown,
-  ArrowRight,
   Users,
   ThumbsUp,
   ThumbsDown,
@@ -24,6 +22,7 @@ import {
   downloadDriveReport,
 } from "../../api/tpo.api";
 import { getPlacementGroups } from "../../api/placementGroups.api";
+import CollegeGateNotice from "../../components/tpo/CollegeGateNotice";
 
 const STATUS_COLORS = {
   upcoming: { bg: "rgba(251,191,36,0.15)", color: "#fcd34d" },
@@ -66,7 +65,7 @@ const TPODrives = () => {
   const [drives, setDrives] = useState([]);
   const [groups, setGroups] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [noCollege, setNoCollege] = useState(false);
+  const [gateStatus, setGateStatus] = useState(null); // null | "none" | "unverified"
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [submitting, setSubmitting] = useState(false);
@@ -80,7 +79,9 @@ const TPODrives = () => {
       setDrives(drivesRes.data.drives || []);
       setGroups(groupsRes.data.groups || []);
     } catch (err) {
-      if (err.response?.status === 404) setNoCollege(true);
+      const status = err.response?.status;
+      if (status === 403) setGateStatus("unverified");
+      else if (status === 404) setGateStatus("none");
       else toast.error(err.response?.data?.message || "Failed to load drives");
     } finally {
       setLoading(false);
@@ -164,15 +165,8 @@ const TPODrives = () => {
     }
   };
 
-  if (noCollege) {
-    return (
-      <div style={{ background: "#170f28", border: "1px dashed rgba(216,180,254,0.25)", borderRadius: "24px", padding: "60px 30px", textAlign: "center" }}>
-        <p style={{ margin: "0 0 18px", color: "#a897c9", fontSize: "14px" }}>Register and get your college verified before posting drives.</p>
-        <Link to="/tpo/college" style={{ display: "inline-flex", alignItems: "center", gap: "8px", borderRadius: "999px", padding: "12px 24px", fontSize: "13px", fontWeight: 700, color: "#fff", background: "linear-gradient(to right,#8b5cf6,#d946ef)", textDecoration: "none" }}>
-          Go to College Setup <ArrowRight size={15} />
-        </Link>
-      </div>
-    );
+  if (gateStatus) {
+    return <CollegeGateNotice status={gateStatus} />;
   }
 
   return (

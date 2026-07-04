@@ -1,441 +1,268 @@
-// src/pages/tpo/TPODashboard.jsx
-import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
-import {
-  GraduationCap,
-  CalendarClock,
-  TrendingUp,
-  ThumbsUp,
-  Upload,
-  Plus,
-  Users2,
-  ArrowRight,
-  ShieldCheck,
-  ShieldAlert,
-  Sparkles,
-} from "lucide-react";
+// src/pages/tpo/TPOStudents.jsx
+import { useEffect, useMemo, useRef, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
-import ColorBends from "../../components/common/ColorBends";
-import { getTpoAnalytics, getStudents, getDrives } from "../../api/tpo.api";
+import { Upload, Search, GraduationCap, X, CheckCircle2, AlertTriangle } from "lucide-react";
+import { getStudents, importStudents } from "../../api/tpo.api";
+import CollegeGateNotice from "../../components/tpo/CollegeGateNotice";
 
-// ── small helpers ────────────────────────────────────────────────────────────
-
-function CountUp({ value = 0, duration = 900 }) {
-  const [display, setDisplay] = useState(0);
-  useEffect(() => {
-    let raf;
-    let start = null;
-    const to = Number(value) || 0;
-    const step = (ts) => {
-      if (!start) start = ts;
-      const progress = Math.min((ts - start) / duration, 1);
-      setDisplay(Math.round(to * progress));
-      if (progress < 1) raf = requestAnimationFrame(step);
-    };
-    raf = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(raf);
-  }, [value, duration]);
-  return <>{display}</>;
-}
-
-function timeUntil(deadline) {
-  const diff = new Date(deadline).getTime() - Date.now();
-  if (diff <= 0) return { text: "Closed", urgent: false };
-  const days = Math.floor(diff / 86400000);
-  const hours = Math.floor((diff % 86400000) / 3600000);
-  if (days > 0) return { text: `${days}d ${hours}h left`, urgent: days < 2 };
-  const mins = Math.floor((diff % 3600000) / 60000);
-  return { text: `${hours}h ${mins}m left`, urgent: true };
-}
-
-const STATUS_COLORS = {
-  upcoming: { bg: "rgba(251,191,36,0.15)", color: "#fcd34d" },
-  ongoing: { bg: "rgba(217,70,239,0.15)", color: "#f0abfc" },
-  closed: { bg: "rgba(148,163,184,0.15)", color: "#cbd5e1" },
-};
-
-const StatCard = ({ icon: Icon, label, value, gradient, delay = 0, suffix = "" }) => (
-  <motion.div
-    initial={{ opacity: 0, y: 16 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ delay, duration: 0.4 }}
-    whileHover={{ y: -3 }}
-    style={{
-      background: "#170f28",
-      border: "1px solid rgba(216,180,254,0.1)",
-      borderRadius: "20px",
-      padding: "22px",
-      display: "flex",
-      alignItems: "center",
-      gap: "16px",
-    }}
-  >
-    <div
-      style={{
-        width: "46px",
-        height: "46px",
-        borderRadius: "14px",
-        background: gradient,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        flexShrink: 0,
-      }}
-    >
-      <Icon size={20} color="#fff" />
-    </div>
-    <div>
-      <p style={{ margin: 0, fontSize: "24px", fontWeight: 800, color: "#fff" }}>
-        <CountUp value={value} />
-        {suffix}
-      </p>
-      <p style={{ margin: 0, fontSize: "13px", color: "#a897c9" }}>{label}</p>
-    </div>
-  </motion.div>
-);
-
-const TPODashboard = () => {
+const TPOStudents = () => {
+  const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [noCollege, setNoCollege] = useState(false);
-  const [analytics, setAnalytics] = useState(null);
-  const [studentCount, setStudentCount] = useState(0);
-  const [drives, setDrives] = useState([]);
+  const [gateStatus, setGateStatus] = useState(null); // null | "none" | "unverified"
+  const [search, setSearch] = useState("");
+  const [branchFilter, setBranchFilter] = useState("all");
+  const [uploading, setUploading] = useState(false);
+  const [importSummary, setImportSummary] = useState(null);
+  const fileInputRef = useRef(null);
+
+  const fetchStudents = async () => {
+    setLoading(true);
+    try {
+      const { data } = await getStudents();
+      setStudents(data.students || []);
+    } catch (err) {
+      const status = err.response?.status;
+      if (status === 403) setGateStatus("unverified");
+      else if (status === 404) setGateStatus("none");
+      else toast.error(err.response?.data?.message || "Failed to load students");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    (async () => {
-      try {
-        const [analyticsRes, studentsRes, drivesRes] = await Promise.allSettled([
-          getTpoAnalytics(),
-          getStudents(),
-          getDrives(),
-        ]);
-
-        const noCollegeErr = [analyticsRes, studentsRes, drivesRes].find(
-          (r) => r.status === "rejected" && r.reason?.response?.status === 404
-        );
-        if (noCollegeErr && [analyticsRes, studentsRes, drivesRes].every((r) => r.status === "rejected")) {
-          setNoCollege(true);
-          return;
-        }
-
-        if (analyticsRes.status === "fulfilled") setAnalytics(analyticsRes.value.data.analytics);
-        if (studentsRes.status === "fulfilled") setStudentCount(studentsRes.value.data.total || 0);
-        if (drivesRes.status === "fulfilled") setDrives(drivesRes.value.data.drives || []);
-      } catch (err) {
-        toast.error("Failed to load dashboard");
-      } finally {
-        setLoading(false);
-      }
-    })();
+    fetchStudents();
   }, []);
 
-  const branchRows = useMemo(() => {
-    if (!analytics?.branchBreakdown) return [];
-    const entries = Object.entries(analytics.branchBreakdown).sort((a, b) => b[1] - a[1]);
-    const max = Math.max(1, ...entries.map(([, v]) => v));
-    return entries.map(([branch, count]) => ({ branch, count, pct: (count / max) * 100 }));
-  }, [analytics]);
+  const handleFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const { data } = await importStudents(file);
+      setImportSummary(data);
+      toast.success(data.message || "Import complete");
+      fetchStudents();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Import failed");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
-  const recentDrives = useMemo(() => drives.slice(0, 5), [drives]);
+  const branches = useMemo(() => {
+    const set = new Set(students.map((s) => s.branch).filter(Boolean));
+    return ["all", ...Array.from(set)];
+  }, [students]);
 
-  if (loading) {
-    return <p style={{ color: "#a897c9" }}>Loading your placement cell...</p>;
-  }
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase();
+    return students.filter((s) => {
+      const matchesBranch = branchFilter === "all" || s.branch === branchFilter;
+      const matchesSearch =
+        !q || s.name?.toLowerCase().includes(q) || s.email?.toLowerCase().includes(q) || s.rollNo?.toLowerCase().includes(q);
+      return matchesBranch && matchesSearch;
+    });
+  }, [students, search, branchFilter]);
 
-  if (noCollege) {
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        style={{
-          background: "#170f28",
-          border: "1px dashed rgba(216,180,254,0.25)",
-          borderRadius: "24px",
-          padding: "60px 30px",
-          textAlign: "center",
-        }}
-      >
-        <div
-          style={{
-            width: "64px",
-            height: "64px",
-            margin: "0 auto 20px",
-            borderRadius: "18px",
-            background: "linear-gradient(135deg,#8b5cf6,#d946ef)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <ShieldAlert size={28} color="#fff" />
-        </div>
-        <h2 style={{ margin: "0 0 8px", fontSize: "20px", fontWeight: 800, color: "#fff" }}>
-          Register your college to get started
-        </h2>
-        <p style={{ margin: "0 0 24px", fontSize: "14px", color: "#a897c9", maxWidth: "420px", marginLeft: "auto", marginRight: "auto" }}>
-          Every TPO account manages exactly one college. Register it once, and an admin will verify it before you can post drives.
-        </p>
-        <Link
-          to="/tpo/college"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "8px",
-            borderRadius: "999px",
-            padding: "12px 26px",
-            fontSize: "14px",
-            fontWeight: 700,
-            color: "#fff",
-            background: "linear-gradient(to right,#8b5cf6,#d946ef)",
-            textDecoration: "none",
-          }}
-        >
-          Register College <ArrowRight size={16} />
-        </Link>
-      </motion.div>
-    );
+  if (gateStatus) {
+    return <CollegeGateNotice status={gateStatus} />;
   }
 
   return (
     <div>
-      {/* Hero */}
-      <div
-        style={{
-          position: "relative",
-          borderRadius: "28px",
-          overflow: "hidden",
-          height: "200px",
-          marginBottom: "28px",
-          border: "1px solid rgba(216,180,254,0.12)",
-        }}
-      >
-        <div style={{ position: "absolute", inset: 0 }}>
-          <ColorBends
-            colors={["#8b5cf6", "#d946ef", "#f472b6"]}
-            rotation={45}
-            speed={0.12}
-            scale={1.1}
-            frequency={1}
-            warpStrength={1}
-            mouseInfluence={1.2}
-            noise={0.06}
-            parallax={0.6}
-            iterations={1}
-            intensity={1}
-            bandWidth={6}
-            transparent
-          />
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "14px", marginBottom: "24px" }}>
+        <div>
+          <h1 style={{ margin: 0, fontSize: "24px", fontWeight: 800, color: "#fff" }}>Students</h1>
+          <p style={{ margin: "6px 0 0", fontSize: "13px", color: "#a897c9" }}>{students.length} students on your campus roster.</p>
         </div>
-        <div
+
+        <label
           style={{
-            position: "absolute",
-            inset: 0,
-            background: "linear-gradient(120deg, rgba(10,7,20,0.85), rgba(10,7,20,0.35))",
-          }}
-        />
-        <div
-          style={{
-            position: "relative",
-            height: "100%",
             display: "flex",
-            flexDirection: "column",
-            justifyContent: "center",
-            padding: "0 32px",
+            alignItems: "center",
+            gap: "8px",
+            padding: "11px 20px",
+            borderRadius: "999px",
+            fontSize: "13px",
+            fontWeight: 700,
+            color: "#fff",
+            background: "linear-gradient(to right,#8b5cf6,#d946ef)",
+            cursor: uploading ? "not-allowed" : "pointer",
+            opacity: uploading ? 0.6 : 1,
+            boxShadow: "0 0 24px rgba(217,70,239,0.25)",
           }}
         >
-          <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "12px", fontWeight: 700, color: "#f0abfc", marginBottom: "8px" }}>
-            <Sparkles size={14} /> PLACEMENT CELL OVERVIEW
-          </span>
-          <h1 style={{ margin: 0, fontSize: "clamp(22px,3vw,32px)", fontWeight: 800, color: "#fff" }}>
-            Welcome back 👋
-          </h1>
-          <p style={{ margin: "6px 0 0", fontSize: "14px", color: "#e9d5ff", maxWidth: "480px" }}>
-            Track drives, manage placement groups and keep your students moving toward offers.
-          </p>
-        </div>
+          <Upload size={15} />
+          {uploading ? "Importing..." : "Import Excel/CSV"}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".xlsx,.xls,.csv"
+            onChange={handleFileChange}
+            disabled={uploading}
+            style={{ display: "none" }}
+          />
+        </label>
       </div>
 
-      {/* Quick actions */}
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", marginBottom: "28px" }}>
-        {[
-          { to: "/tpo/students", label: "Import Students", icon: Upload },
-          { to: "/tpo/placement-groups", label: "Create Group", icon: Users2 },
-          { to: "/tpo/drives", label: "Post a Drive", icon: Plus },
-        ].map(({ to, label, icon: Icon }) => (
-          <Link
-            key={to}
-            to={to}
+      {/* Filters */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", marginBottom: "20px" }}>
+        <div style={{ position: "relative", flex: "1 1 260px" }}>
+          <Search size={16} color="#7c6f93" style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)" }} />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by name, email, or roll no..."
             style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              padding: "11px 18px",
-              borderRadius: "999px",
-              fontSize: "13px",
-              fontWeight: 700,
+              width: "100%",
+              boxSizing: "border-box",
+              padding: "10px 14px 10px 40px",
+              borderRadius: "10px",
+              border: "1px solid rgba(216,180,254,0.12)",
+              background: "#170f28",
               color: "#fff",
-              textDecoration: "none",
-              border: "1px solid rgba(216,180,254,0.18)",
-              background: "rgba(255,255,255,0.04)",
+              fontSize: "14px",
+              outline: "none",
             }}
-          >
-            <Icon size={15} /> {label}
-          </Link>
-        ))}
-      </div>
-
-      {/* Stats */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "18px", marginBottom: "26px" }}>
-        <StatCard icon={GraduationCap} label="Students Onboarded" value={studentCount} gradient="linear-gradient(135deg,#8b5cf6,#a78bfa)" delay={0} />
-        <StatCard icon={CalendarClock} label="Drives Posted" value={analytics?.drivesPosted || 0} gradient="linear-gradient(135deg,#d946ef,#f472b6)" delay={0.05} />
-        <StatCard icon={ThumbsUp} label="Interested Responses" value={analytics?.interested || 0} gradient="linear-gradient(135deg,#06b6d4,#22d3ee)" delay={0.1} />
-        <StatCard icon={TrendingUp} label="Interested Rate" value={analytics?.interestedPercentage || 0} suffix="%" gradient="linear-gradient(135deg,#34d399,#10b981)" delay={0.15} />
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1.1fr 0.9fr", gap: "20px", marginBottom: "26px" }} className="lg:grid-cols-2">
-        {/* Branch breakdown */}
-        <div style={{ background: "#170f28", border: "1px solid rgba(216,180,254,0.1)", borderRadius: "20px", padding: "24px" }}>
-          <h2 style={{ margin: "0 0 18px", fontSize: "15px", fontWeight: 700, color: "#fff" }}>
-            Interested Students by Branch
-          </h2>
-          {branchRows.length === 0 ? (
-            <p style={{ color: "#7c6f93", fontSize: "13px" }}>No responses yet — post a drive to start collecting interest.</p>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-              {branchRows.map((row, i) => (
-                <div key={row.branch}>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
-                    <span style={{ fontSize: "13px", color: "#e9d5ff", fontWeight: 600 }}>{row.branch}</span>
-                    <span style={{ fontSize: "13px", color: "#a897c9" }}>{row.count}</span>
-                  </div>
-                  <div style={{ width: "100%", height: "8px", borderRadius: "999px", background: "rgba(255,255,255,0.05)" }}>
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: `${row.pct}%` }}
-                      transition={{ duration: 0.6, delay: i * 0.05 }}
-                      style={{ height: "100%", borderRadius: "999px", background: "linear-gradient(to right,#8b5cf6,#d946ef)" }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          />
         </div>
-
-        {/* Top skills */}
-        <div style={{ background: "#170f28", border: "1px solid rgba(216,180,254,0.1)", borderRadius: "20px", padding: "24px" }}>
-          <h2 style={{ margin: "0 0 18px", fontSize: "15px", fontWeight: 700, color: "#fff" }}>
-            Top Skills Among Interested Candidates
-          </h2>
-          {!analytics?.topSkills?.length ? (
-            <p style={{ color: "#7c6f93", fontSize: "13px" }}>Skill data will appear once students respond to drives.</p>
-          ) : (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-              {analytics.topSkills.map((s, i) => (
-                <motion.span
-                  key={s.skill}
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: i * 0.04 }}
-                  style={{
-                    fontSize: `${11 + Math.min(s.count, 6)}px`,
-                    fontWeight: 700,
-                    color: "#f0abfc",
-                    background: "rgba(217,70,239,0.12)",
-                    border: "1px solid rgba(217,70,239,0.2)",
-                    padding: "6px 14px",
-                    borderRadius: "999px",
-                  }}
-                >
-                  {s.skill} · {s.count}
-                </motion.span>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Recent drives */}
-      <div style={{ background: "#170f28", border: "1px solid rgba(216,180,254,0.1)", borderRadius: "20px", padding: "24px" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "18px" }}>
-          <h2 style={{ margin: 0, fontSize: "15px", fontWeight: 700, color: "#fff" }}>Recent Drives</h2>
-          <Link to="/tpo/drives" style={{ fontSize: "12px", fontWeight: 700, color: "#f0abfc", textDecoration: "none", display: "flex", alignItems: "center", gap: "4px" }}>
-            View all <ArrowRight size={13} />
-          </Link>
-        </div>
-
-        {recentDrives.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "36px 10px" }}>
-            <p style={{ margin: "0 0 14px", color: "#7c6f93", fontSize: "13px" }}>No drives posted yet.</p>
-            <Link
-              to="/tpo/drives"
+        <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+          {branches.map((b) => (
+            <button
+              key={b}
+              onClick={() => setBranchFilter(b)}
               style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
+                padding: "9px 16px",
                 borderRadius: "999px",
-                padding: "9px 18px",
                 fontSize: "12px",
-                fontWeight: 700,
+                fontWeight: 600,
+                border: "1px solid rgba(216,180,254,0.12)",
+                background: branchFilter === b ? "linear-gradient(to right,#8b5cf6,#d946ef)" : "transparent",
                 color: "#fff",
-                background: "linear-gradient(to right,#8b5cf6,#d946ef)",
-                textDecoration: "none",
+                cursor: "pointer",
+                textTransform: "capitalize",
               }}
             >
-              <Plus size={14} /> Post your first drive
-            </Link>
-          </div>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-            {recentDrives.map((d) => {
-              const status = STATUS_COLORS[d.status] || STATUS_COLORS.ongoing;
-              const countdown = timeUntil(d.deadline);
-              return (
-                <div
-                  key={d.id}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: "12px",
-                    flexWrap: "wrap",
-                    padding: "14px 16px",
-                    borderRadius: "14px",
-                    background: "rgba(255,255,255,0.02)",
-                    border: "1px solid rgba(216,180,254,0.06)",
-                  }}
-                >
-                  <div style={{ minWidth: 0 }}>
-                    <p style={{ margin: 0, fontSize: "14px", fontWeight: 700, color: "#fff" }}>{d.title}</p>
-                    <p style={{ margin: "2px 0 0", fontSize: "12px", color: "#a897c9" }}>{d.company}</p>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "10px", flexShrink: 0 }}>
-                    <span style={{ fontSize: "11px", fontWeight: 600, color: countdown.urgent ? "#fca5a5" : "#a897c9" }}>
-                      {countdown.text}
-                    </span>
-                    <span
-                      style={{
-                        fontSize: "11px",
-                        fontWeight: 700,
-                        textTransform: "capitalize",
-                        color: status.color,
-                        background: status.bg,
-                        padding: "4px 12px",
-                        borderRadius: "999px",
-                      }}
-                    >
-                      {d.status}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+              {b}
+            </button>
+          ))}
+        </div>
       </div>
+
+      {loading ? (
+        <p style={{ color: "#a897c9" }}>Loading students...</p>
+      ) : (
+        <div style={{ borderRadius: "16px", border: "1px solid rgba(216,180,254,0.1)", overflow: "hidden", background: "#170f28" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr style={{ borderBottom: "1px solid rgba(216,180,254,0.08)" }}>
+                {["Student", "Roll No", "Branch", "CGPA", "Skills"].map((h) => (
+                  <th key={h} style={{ textAlign: "left", padding: "14px 20px", fontSize: "11px", fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: "#7c6f93" }}>
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((s) => (
+                <tr key={s._id} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                  <td style={{ padding: "14px 20px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: "linear-gradient(135deg,#8b5cf6,#d946ef)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: 700, color: "#fff", flexShrink: 0 }}>
+                        <GraduationCap size={14} />
+                      </div>
+                      <div>
+                        <p style={{ margin: 0, fontSize: "13.5px", fontWeight: 600, color: "#fff" }}>{s.name}</p>
+                        <p style={{ margin: 0, fontSize: "12px", color: "#7c6f93" }}>{s.email}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td style={{ padding: "14px 20px", color: "#c4b5fd", fontSize: "13px" }}>{s.rollNo || "—"}</td>
+                  <td style={{ padding: "14px 20px", color: "#c4b5fd", fontSize: "13px" }}>{s.branch || "—"}</td>
+                  <td style={{ padding: "14px 20px", color: "#c4b5fd", fontSize: "13px" }}>{s.cgpa ?? "—"}</td>
+                  <td style={{ padding: "14px 20px" }}>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", maxWidth: "260px" }}>
+                      {(s.skills || []).slice(0, 4).map((sk) => (
+                        <span key={sk} style={{ fontSize: "10.5px", fontWeight: 600, color: "#f0abfc", background: "rgba(217,70,239,0.1)", padding: "3px 8px", borderRadius: "999px" }}>
+                          {sk}
+                        </span>
+                      ))}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {filtered.length === 0 && (
+                <tr>
+                  <td colSpan={5} style={{ padding: "40px", textAlign: "center", color: "#544468" }}>
+                    No students match your search.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Import summary modal */}
+      <AnimatePresence>
+        {importSummary && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setImportSummary(null)}
+            style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", zIndex: 100 }}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              onClick={(e) => e.stopPropagation()}
+              style={{ width: "100%", maxWidth: "480px", background: "#1a1030", border: "1px solid rgba(216,180,254,0.15)", borderRadius: "20px", padding: "26px", boxSizing: "border-box" }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+                <h3 style={{ margin: 0, fontSize: "17px", fontWeight: 800, color: "#fff" }}>Import Summary</h3>
+                <button onClick={() => setImportSummary(null)} style={{ border: "none", background: "transparent", color: "#a897c9", cursor: "pointer" }}>
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: "10px", marginBottom: "16px" }}>
+                {[
+                  { label: "Total Rows", value: importSummary.summary?.totalRows },
+                  { label: "Created", value: importSummary.summary?.created },
+                  { label: "Linked", value: importSummary.summary?.linked },
+                  { label: "Skipped", value: importSummary.summary?.skipped },
+                ].map((s) => (
+                  <div key={s.label} style={{ background: "rgba(255,255,255,0.03)", borderRadius: "12px", padding: "12px" }}>
+                    <p style={{ margin: 0, fontSize: "18px", fontWeight: 800, color: "#fff" }}>{s.value ?? 0}</p>
+                    <p style={{ margin: 0, fontSize: "11px", color: "#a897c9" }}>{s.label}</p>
+                  </div>
+                ))}
+              </div>
+
+              <p style={{ fontSize: "12px", color: "#a897c9", display: "flex", alignItems: "center", gap: "6px", marginBottom: "10px" }}>
+                <CheckCircle2 size={13} color="#34d399" />
+                {importSummary.emails?.sent || 0} credential emails sent
+              </p>
+
+              {importSummary.summary?.errors?.length > 0 && (
+                <div style={{ maxHeight: "160px", overflowY: "auto", marginTop: "10px" }}>
+                  {importSummary.summary.errors.slice(0, 10).map((e, i) => (
+                    <p key={i} style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11.5px", color: "#fca5a5", margin: "4px 0" }}>
+                      <AlertTriangle size={11} /> Row {e.row}: {e.reason}
+                    </p>
+                  ))}
+                </div>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
 
-export default TPODashboard;
+export default TPOStudents;
