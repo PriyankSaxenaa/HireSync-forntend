@@ -14,7 +14,7 @@ const roleHome = {
   admin: "/admin/dashboard",
   recruiter: "/recruiter/dashboard",
   tpo: "/tpo/dashboard",
-  candidate: "/",
+  candidate: "/candidate/dashboard", // was "/"
 };
 
 const Login = () => {
