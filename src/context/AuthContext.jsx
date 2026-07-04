@@ -36,6 +36,11 @@ export const AuthProvider = ({ children }) => {
     }
     setUser(null);
     sessionStorage.removeItem("hiresync_user");
+    // TPOCollegeSetup caches the registered college under a fixed key that
+    // isn't scoped per-user — clear it here so the next TPO to log in on
+    // this browser (e.g. a fresh account after the old one was deleted)
+    // never sees a previous session's college.
+    sessionStorage.removeItem("hiresync_tpo_college");
   }, []);
 
   return (

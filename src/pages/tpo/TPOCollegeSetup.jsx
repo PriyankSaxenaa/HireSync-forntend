@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import toast from "react-hot-toast";
 import { School, Globe, MapPin, ShieldCheck, ShieldAlert, ArrowRight } from "lucide-react";
 import { registerCollege, getCollegeById } from "../../api/college.api";
+import { useAuth } from "../../hooks/useAuth";
 
 const inputStyle = {
   width: "100%",
@@ -32,6 +33,7 @@ const labelStyle = {
 const CACHE_KEY = "hiresync_tpo_college";
 
 const TPOCollegeSetup = () => {
+  const { user } = useAuth();
   const [form, setForm] = useState({ name: "", address: "", website: "" });
   const [submitting, setSubmitting] = useState(false);
   const [college, setCollege] = useState(null);
@@ -43,18 +45,29 @@ const TPOCollegeSetup = () => {
       if (cached) {
         try {
           const parsed = JSON.parse(cached);
-          setCollege(parsed);
-          // refresh verification status in the background
-          const { data } = await getCollegeById(parsed._id);
-          setCollege(data.college);
-          sessionStorage.setItem(CACHE_KEY, JSON.stringify(data.college));
+          const cachedTpoId = typeof parsed.tpo === "string" ? parsed.tpo : parsed.tpo?._id;
+
+          // Defense in depth against the sessionStorage key not being
+          // per-user: if the cached college belongs to a different TPO
+          // than the one currently logged in (e.g. a previous account that
+          // was deleted, replaced by a new one in the same browser tab),
+          // throw the cache away instead of trusting it.
+          if (cachedTpoId && user?.id && cachedTpoId !== user.id) {
+            sessionStorage.removeItem(CACHE_KEY);
+          } else {
+            setCollege(parsed);
+            // refresh verification status in the background
+            const { data } = await getCollegeById(parsed._id);
+            setCollege(data.college);
+            sessionStorage.setItem(CACHE_KEY, JSON.stringify(data.college));
+          }
         } catch {
           // stale cache — keep showing what we had
         }
       }
       setChecking(false);
     })();
-  }, []);
+  }, [user]);
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 

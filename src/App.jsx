@@ -26,6 +26,17 @@ import TPOPlacementGroups from "./pages/tpo/TPOPlacementGroups";
 import TPODrives from "./pages/tpo/TPODrives";
 import TPOCollegeSetup from "./pages/tpo/TPOCollegeSetup";
 
+import CandidateLayout from "./layouts/CandidateLayout";
+import CandidateDashboard from "./pages/candidate/CandidateDashboard";
+import BrowseJobs from "./pages/candidate/BrowseJobs";
+import JobDetails from "./pages/candidate/JobDetails";
+import MyApplications from "./pages/candidate/MyApplications";
+import SavedJobs from "./pages/candidate/SavedJobs";
+import CampusDrives from "./pages/candidate/CampusDrives";
+import CampusDriveDetails from "./pages/candidate/CampusDriveDetails";
+import Profile from "./pages/candidate/Profile";
+
+import NotFound from "./pages/landing/NotFound";
 import AccountDeletionGuard from "./components/common/AccountDeletionGuard";
 
 
@@ -69,7 +80,23 @@ function App() {
                 <Route path="college" element={<TPOCollegeSetup />} />
               </Route>
             </Route>
+
+            <Route element={<RoleGuard allow={["candidate"]} />}>
+              <Route path="/candidate" element={<CandidateLayout />}>
+                <Route index element={<CandidateDashboard />} />
+                <Route path="dashboard" element={<CandidateDashboard />} />
+                <Route path="jobs" element={<BrowseJobs />} />
+                <Route path="jobs/:id" element={<JobDetails />} />
+                <Route path="applications" element={<MyApplications />} />
+                <Route path="saved" element={<SavedJobs />} />
+                <Route path="campus" element={<CampusDrives />} />
+                <Route path="campus/:id" element={<CampusDriveDetails />} />
+                <Route path="profile" element={<Profile />} />
+              </Route>
+            </Route>
           </Route>
+
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
