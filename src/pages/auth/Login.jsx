@@ -91,6 +91,13 @@ const Login = () => {
           />
         </FormField>
 
+        <p style={{ textAlign: "right", marginBottom: "20px" }}>
+          <Link to="/login" onClick={(e) => e.preventDefault()} style={{ display: "none" }} />
+          <Link to="/forgot-password" style={{ fontSize: "13px", fontWeight: 600, color: "#818cf8" }}>
+            Forgot password?
+          </Link>
+        </p>
+        
         <button
           type="submit"
           disabled={loading}

@@ -5,6 +5,8 @@ import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import RoleGuard from "./components/common/RoleGuard";
 import DashboardLayout from "./layouts/DashboardLayout";
+import ForgotPassword from "./pages/auth/ForgotPassword";
+
 
 import Landing from "./pages/landing/Landing";
 import Login from "./pages/auth/Login";
@@ -50,6 +52,7 @@ function App() {
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
 
           <Route element={<ProtectedRoute />}>
             <Route element={<RoleGuard allow={["admin"]} />}>
