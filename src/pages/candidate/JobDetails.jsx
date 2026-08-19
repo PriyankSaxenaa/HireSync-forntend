@@ -1,17 +1,40 @@
 // src/pages/candidate/JobDetails.jsx
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import toast from "react-hot-toast";
-import { ArrowLeft, MapPin, Calendar, Wallet, Bookmark, BookmarkCheck } from "lucide-react";
-import GlowCard from "../../components/candidate/GlowCard";
+import { MapPin, Calendar, Wallet, Bookmark, BookmarkCheck, Building2, Check, Loader2, Briefcase } from "lucide-react";
+import SpotlightCard from "../../components/fx/SpotlightCard";
 import SkillPill from "../../components/candidate/SkillPill";
+import BackLink from "../../components/fx/BackLink";
+import Loader from "../../components/fx/Loader";
+import EmptyState from "../../components/fx/EmptyState";
+import Aurora from "../../components/fx/Aurora";
 import { getJobById } from "../../api/jobs.api";
 import { applyToJob, saveJob, getMyApplications, getSavedJobs } from "../../api/applications.api";
 
+const Meta = ({ icon: Icon, label, value }) => (
+  <div
+    style={{
+      flex: "1 1 150px",
+      padding: "13px 15px",
+      borderRadius: "var(--hs-r)",
+      background: "rgba(255,255,255,0.035)",
+      border: "1px solid var(--hs-line)",
+    }}
+  >
+    <p
+      className="hs-eyebrow"
+      style={{ margin: "0 0 5px", fontSize: "9.5px", color: "var(--hs-dim)" }}
+    >
+      <Icon size={11} /> {label}
+    </p>
+    <p style={{ margin: 0, fontSize: "13.5px", fontWeight: 700, color: "var(--hs-text)" }}>{value}</p>
+  </div>
+);
+
 const JobDetails = () => {
   const { id } = useParams();
-  const navigate = useNavigate();
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
   const [applied, setApplied] = useState(false);
@@ -68,70 +91,160 @@ const JobDetails = () => {
     }
   };
 
-  if (loading) return <p style={{ color: "#a897c9" }}>Loading job...</p>;
-  if (!job) return <p style={{ color: "#a897c9" }}>Job not found.</p>;
+  if (loading) return <Loader label="Loading role" full />;
+
+  if (!job) {
+    return (
+      <div style={{ maxWidth: "760px" }}>
+        <BackLink />
+        <EmptyState icon={Briefcase} title="Job not found" subtitle="This role may have been closed or removed." />
+      </div>
+    );
+  }
 
   return (
-    <div style={{ maxWidth: "760px" }}>
-      <button
-        onClick={() => navigate(-1)}
-        style={{ display: "flex", alignItems: "center", gap: "6px", border: "none", background: "transparent", color: "#a897c9", fontSize: "13px", fontWeight: 600, cursor: "pointer", marginBottom: "18px", padding: 0 }}
-      >
-        <ArrowLeft size={14} /> Back
-      </button>
+    <div style={{ maxWidth: "820px" }}>
+      <BackLink />
 
-      <GlowCard style={{ padding: "30px" }} hoverLift={false}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "14px", marginBottom: "18px" }}>
-          <div>
-            <h1 style={{ margin: 0, fontSize: "24px", fontWeight: 800, color: "#fff" }}>{job.title}</h1>
-            <p style={{ margin: "6px 0 0", fontSize: "15px", color: "#c4b5fd", fontWeight: 600 }}>{job.company}</p>
+      <SpotlightCard hover={false} live padding={0} style={{ overflow: "hidden" }}>
+        {/* Hero strip with its own drifting aurora */}
+        <div style={{ position: "relative", padding: "30px 30px 24px", overflow: "hidden" }}>
+          <Aurora particles={false} grain={false} blobOpacity={0.42} intensity={0.7} />
+
+          <div style={{ position: "relative", zIndex: 2, display: "flex", alignItems: "flex-start", gap: "16px" }}>
+            <div
+              style={{
+                width: "54px",
+                height: "54px",
+                flexShrink: 0,
+                borderRadius: "var(--hs-r-lg)",
+                display: "grid",
+                placeItems: "center",
+                background: "rgba(var(--hs-a2-rgb),0.14)",
+                border: "1px solid rgba(var(--hs-a2-rgb),0.3)",
+              }}
+            >
+              <Building2 size={23} style={{ color: "var(--hs-a3)" }} />
+            </div>
+
+            <div style={{ minWidth: 0 }}>
+              <h1
+                style={{
+                  margin: 0,
+                  fontSize: "clamp(21px, 3vw, 27px)",
+                  fontWeight: 900,
+                  color: "var(--hs-text)",
+                  letterSpacing: "-0.025em",
+                }}
+              >
+                {job.title}
+              </h1>
+              <p style={{ margin: "6px 0 0", fontSize: "14.5px", color: "var(--hs-a2)", fontWeight: 700 }}>
+                {job.company}
+              </p>
+            </div>
           </div>
         </div>
 
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "18px", marginBottom: "20px", fontSize: "13.5px", color: "#a897c9" }}>
-          <span style={{ display: "flex", alignItems: "center", gap: "6px" }}><MapPin size={14} /> {job.location}</span>
-          <span style={{ display: "flex", alignItems: "center", gap: "6px" }}><Wallet size={14} /> {job.salaryRange || "Not Disclosed"}</span>
-          <span style={{ display: "flex", alignItems: "center", gap: "6px" }}><Calendar size={14} /> Apply before {new Date(job.applicationDeadline).toLocaleDateString()}</span>
-        </div>
-
-        {job.skillsRequired?.length > 0 && (
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "24px" }}>
-            {job.skillsRequired.map((s) => <SkillPill key={s}>{s}</SkillPill>)}
+        <div style={{ padding: "0 30px 30px" }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginBottom: "24px" }}>
+            <Meta icon={MapPin} label="Location" value={job.location || "—"} />
+            <Meta icon={Wallet} label="Compensation" value={job.salaryRange || "Not disclosed"} />
+            <Meta
+              icon={Calendar}
+              label="Apply before"
+              value={job.applicationDeadline ? new Date(job.applicationDeadline).toLocaleDateString() : "—"}
+            />
           </div>
-        )}
 
-        <p style={{ fontSize: "14px", lineHeight: 1.7, color: "#e9d5ff", whiteSpace: "pre-wrap", marginBottom: "26px" }}>{job.description}</p>
+          {job.skillsRequired?.length > 0 && (
+            <>
+              <p className="hs-eyebrow" style={{ margin: "0 0 11px", fontSize: "10px", color: "var(--hs-dim)" }}>
+                Skills required
+              </p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "26px" }}>
+                {job.skillsRequired.map((s) => (
+                  <SkillPill key={s}>{s}</SkillPill>
+                ))}
+              </div>
+            </>
+          )}
 
-        <div style={{ display: "flex", gap: "10px", paddingTop: "20px", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-          <motion.button
-            whileTap={{ scale: 0.97 }}
-            onClick={handleApply}
-            disabled={applied || applying}
-            style={{
-              flex: 1,
-              border: "none",
-              borderRadius: "12px",
-              padding: "13px",
-              fontSize: "14px",
-              fontWeight: 700,
-              color: "#fff",
-              background: applied ? "rgba(52,211,153,0.15)" : "linear-gradient(to right,#8b5cf6,#d946ef)",
-              cursor: applied || applying ? "not-allowed" : "pointer",
-              boxShadow: applied ? "none" : "0 0 25px rgba(217,70,239,0.3)",
-            }}
-          >
-            {applied ? "Applied ✓" : applying ? "Applying..." : "Apply Now"}
-          </motion.button>
-          <motion.button
-            whileTap={{ scale: 0.9 }}
-            onClick={handleSave}
-            disabled={saved || savingJob}
-            style={{ width: "52px", display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid rgba(216,180,254,0.18)", borderRadius: "12px", background: "transparent", color: saved ? "#f0abfc" : "#c4b5fd", cursor: saved ? "default" : "pointer" }}
-          >
-            {saved ? <BookmarkCheck size={18} /> : <Bookmark size={18} />}
-          </motion.button>
+          {job.description && (
+            <>
+              <p className="hs-eyebrow" style={{ margin: "0 0 11px", fontSize: "10px", color: "var(--hs-dim)" }}>
+                About the role
+              </p>
+              <p
+                style={{
+                  fontSize: "14px",
+                  lineHeight: 1.78,
+                  color: "var(--hs-muted)",
+                  whiteSpace: "pre-wrap",
+                  marginBottom: "26px",
+                }}
+              >
+                {job.description}
+              </p>
+            </>
+          )}
+
+          <div style={{ display: "flex", gap: "10px", paddingTop: "20px", borderTop: "1px solid var(--hs-line)" }}>
+            <motion.button
+              whileTap={{ scale: 0.97 }}
+              onClick={handleApply}
+              disabled={applied || applying}
+              style={{
+                flex: 1,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "8px",
+                border: applied ? "1px solid rgba(var(--hs-ok-rgb),0.32)" : "none",
+                borderRadius: "var(--hs-r-full)",
+                padding: "14px",
+                fontSize: "14px",
+                fontWeight: 700,
+                color: applied ? "var(--hs-ok)" : "#fff",
+                background: applied ? "rgba(var(--hs-ok-rgb),0.12)" : "var(--hs-a2)",
+                cursor: applied || applying ? "not-allowed" : "pointer",
+              }}
+            >
+              {applied ? (
+                <>
+                  <Check size={16} /> Applied
+                </>
+              ) : applying ? (
+                <>
+                  <Loader2 size={16} style={{ animation: "hs-spin 1s linear infinite" }} /> Applying…
+                </>
+              ) : (
+                "Apply now"
+              )}
+            </motion.button>
+
+            <motion.button
+              whileTap={{ scale: 0.9 }}
+              onClick={handleSave}
+              disabled={saved || savingJob}
+              aria-label={saved ? "Saved" : "Save job"}
+              style={{
+                width: "54px",
+                display: "grid",
+                placeItems: "center",
+                border: `1px solid ${saved ? "rgba(var(--hs-a2-rgb),0.45)" : "var(--hs-line)"}`,
+                borderRadius: "var(--hs-r-full)",
+                background: saved ? "rgba(var(--hs-a2-rgb),0.12)" : "transparent",
+                color: saved ? "var(--hs-a2)" : "var(--hs-muted)",
+                cursor: saved ? "default" : "pointer",
+                transition: "all 0.2s var(--hs-ease)",
+              }}
+            >
+              {saved ? <BookmarkCheck size={18} /> : <Bookmark size={18} />}
+            </motion.button>
+          </div>
         </div>
-      </GlowCard>
+      </SpotlightCard>
     </div>
   );
 };

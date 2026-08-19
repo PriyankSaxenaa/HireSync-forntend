@@ -1,8 +1,14 @@
 // src/pages/dashboard/Jobs.jsx
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
-import { Search, MapPin, Calendar } from "lucide-react";
+import { Search, MapPin, Calendar, Briefcase, Building2 } from "lucide-react";
 import { getAllJobsAdmin } from "../../api/admin.api";
+import SpotlightCard from "../../components/fx/SpotlightCard";
+import PageHeader from "../../components/fx/PageHeader";
+import SearchField from "../../components/fx/SearchField";
+import EmptyState from "../../components/fx/EmptyState";
+import Counter from "../../components/fx/Counter";
+import { SkeletonGrid } from "../../components/fx/Skeleton";
 
 const Jobs = () => {
   const [jobs, setJobs] = useState([]);
@@ -24,79 +30,102 @@ const Jobs = () => {
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
-    return jobs.filter(
-      (j) => !q || j.title?.toLowerCase().includes(q) || j.company?.toLowerCase().includes(q)
-    );
+    return jobs.filter((j) => !q || j.title?.toLowerCase().includes(q) || j.company?.toLowerCase().includes(q));
   }, [jobs, search]);
-
-  if (loading) return <p style={{ color: "#94a3b8" }}>Loading jobs...</p>;
 
   return (
     <div>
-      <div style={{ position: "relative", maxWidth: "360px", marginBottom: "20px" }}>
-        <Search size={16} color="#64748b" style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)" }} />
-        <input
+      <PageHeader
+        eyebrow="Moderation"
+        icon={Briefcase}
+        title="All jobs"
+        liveLabel={`${jobs.length} LIVE`}
+        subtitle={
+          <>
+            <b style={{ color: "var(--hs-text)" }}>
+              <Counter value={filtered.length} />
+            </b>{" "}
+            of {jobs.length} posting{jobs.length === 1 ? "" : "s"} across every recruiter on the platform.
+          </>
+        }
+      >
+        <SearchField
+          icon={Search}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search jobs or companies..."
-          style={{
-            width: "100%",
-            boxSizing: "border-box",
-            padding: "10px 14px 10px 40px",
-            borderRadius: "10px",
-            border: "1px solid rgba(255,255,255,0.1)",
-            background: "#0c1120",
-            color: "#fff",
-            fontSize: "14px",
-            outline: "none",
-          }}
+          onClear={() => setSearch("")}
+          placeholder="Search jobs or companies…"
+          flex="1 1 320px"
         />
-      </div>
+      </PageHeader>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "16px" }}>
-        {filtered.map((j) => (
-          <div
-            key={j._id}
-            style={{
-              background: "#0c1120",
-              border: "1px solid rgba(255,255,255,0.08)",
-              borderRadius: "16px",
-              padding: "20px",
-              transition: "border-color 0.15s, transform 0.15s",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = "rgba(99,102,241,0.4)";
-              e.currentTarget.style.transform = "translateY(-2px)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)";
-              e.currentTarget.style.transform = "translateY(0)";
-            }}
-          >
-            <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 700, color: "#fff" }}>{j.title}</h3>
-            <p style={{ margin: "4px 0 14px", fontSize: "13px", color: "#818cf8", fontWeight: 600 }}>{j.company}</p>
+      {loading ? (
+        <SkeletonGrid count={6} />
+      ) : filtered.length === 0 ? (
+        <EmptyState
+          icon={Briefcase}
+          title={jobs.length === 0 ? "No jobs posted yet" : "No jobs match your search"}
+          subtitle={
+            jobs.length === 0
+              ? "Recruiter postings will appear here as soon as they publish."
+              : "Try a different keyword."
+          }
+        />
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "16px" }}>
+          {filtered.map((j) => (
+            <SpotlightCard key={j._id} padding={20} style={{ height: "100%" }}>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: "12px", marginBottom: "14px" }}>
+                <div
+                  style={{
+                    width: "38px",
+                    height: "38px",
+                    flexShrink: 0,
+                    borderRadius: "12px",
+                    display: "grid",
+                    placeItems: "center",
+                    background: "var(--hs-grad-soft)",
+                    border: "1px solid var(--hs-line)",
+                  }}
+                >
+                  <Building2 size={17} style={{ color: "var(--hs-a2)" }} />
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <h3 style={{ margin: 0, fontSize: "15.5px", fontWeight: 800, color: "var(--hs-text)", lineHeight: 1.3 }}>
+                    {j.title}
+                  </h3>
+                  <p style={{ margin: "3px 0 0", fontSize: "12.5px", color: "var(--hs-a2)", fontWeight: 700 }}>
+                    {j.company}
+                  </p>
+                </div>
+              </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "6px", fontSize: "13px", color: "#94a3b8" }}>
-              <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                <MapPin size={13} /> {j.location || "—"}
-              </span>
-              <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                <Calendar size={13} />
-                {j.applicationDeadline ? new Date(j.applicationDeadline).toLocaleDateString() : "—"}
-              </span>
-            </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "7px", fontSize: "12.5px", color: "var(--hs-muted)" }}>
+                <span style={{ display: "flex", alignItems: "center", gap: "7px" }}>
+                  <MapPin size={13} style={{ color: "var(--hs-dim)" }} /> {j.location || "—"}
+                </span>
+                <span style={{ display: "flex", alignItems: "center", gap: "7px" }}>
+                  <Calendar size={13} style={{ color: "var(--hs-dim)" }} />
+                  {j.applicationDeadline ? new Date(j.applicationDeadline).toLocaleDateString() : "—"}
+                </span>
+              </div>
 
-            <div style={{ marginTop: "14px", paddingTop: "14px", borderTop: "1px solid rgba(255,255,255,0.06)", fontSize: "12px", color: "#64748b" }}>
-              Posted by <span style={{ color: "#cbd5e1", fontWeight: 600 }}>{j.recruiter?.name || "Unknown"}</span>
-            </div>
-          </div>
-        ))}
-        {filtered.length === 0 && (
-          <p style={{ color: "#475569", gridColumn: "1 / -1", textAlign: "center", padding: "40px" }}>
-            No jobs found.
-          </p>
-        )}
-      </div>
+              <div
+                style={{
+                  marginTop: "14px",
+                  paddingTop: "14px",
+                  borderTop: "1px solid var(--hs-line)",
+                  fontSize: "12px",
+                  color: "var(--hs-dim)",
+                }}
+              >
+                Posted by{" "}
+                <span style={{ color: "var(--hs-text)", fontWeight: 700 }}>{j.recruiter?.name || "Unknown"}</span>
+              </div>
+            </SpotlightCard>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

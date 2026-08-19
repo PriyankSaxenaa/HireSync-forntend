@@ -1,10 +1,16 @@
 // src/pages/tpo/TPOStudents.jsx
 import { useEffect, useMemo, useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
-import { Upload, Search, GraduationCap, X, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Upload, Search, GraduationCap, CheckCircle2, AlertTriangle, Users2 } from "lucide-react";
 import { getStudents, importStudents } from "../../api/tpo.api";
 import CollegeGateNotice from "../../components/tpo/CollegeGateNotice";
+import PageHeader from "../../components/fx/PageHeader";
+import DataTable from "../../components/fx/DataTable";
+import SearchField from "../../components/fx/SearchField";
+import FilterChips from "../../components/fx/FilterChips";
+import Modal from "../../components/fx/Modal";
+import Counter from "../../components/fx/Counter";
+import Loader from "../../components/fx/Loader";
 
 const TPOStudents = () => {
   const [students, setStudents] = useState([]);
@@ -52,9 +58,15 @@ const TPOStudents = () => {
     }
   };
 
-  const branches = useMemo(() => {
-    const set = new Set(students.map((s) => s.branch).filter(Boolean));
-    return ["all", ...Array.from(set)];
+  const branchOptions = useMemo(() => {
+    const counts = new Map();
+    students.forEach((s) => {
+      if (s.branch) counts.set(s.branch, (counts.get(s.branch) || 0) + 1);
+    });
+    return [
+      { key: "all", label: "All", count: students.length },
+      ...Array.from(counts, ([key, count]) => ({ key, label: key, count })),
+    ];
   }, [students]);
 
   const filtered = useMemo(() => {
@@ -62,205 +74,230 @@ const TPOStudents = () => {
     return students.filter((s) => {
       const matchesBranch = branchFilter === "all" || s.branch === branchFilter;
       const matchesSearch =
-        !q || s.name?.toLowerCase().includes(q) || s.email?.toLowerCase().includes(q) || s.rollNo?.toLowerCase().includes(q);
+        !q ||
+        s.name?.toLowerCase().includes(q) ||
+        s.email?.toLowerCase().includes(q) ||
+        s.rollNo?.toLowerCase().includes(q);
       return matchesBranch && matchesSearch;
     });
   }, [students, search, branchFilter]);
 
-  if (gateStatus) {
-    return <CollegeGateNotice status={gateStatus} />;
-  }
+  if (gateStatus) return <CollegeGateNotice status={gateStatus} />;
+
+  const columns = [
+    {
+      key: "name",
+      header: "Student",
+      render: (s) => (
+        <div style={{ display: "flex", alignItems: "center", gap: "11px" }}>
+          <div
+            style={{
+              width: "34px",
+              height: "34px",
+              flexShrink: 0,
+              borderRadius: "50%",
+              display: "grid",
+              placeItems: "center",
+              background: "var(--hs-a2)",
+            }}
+          >
+            <GraduationCap size={15} color="#fff" />
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <p style={{ margin: 0, fontSize: "13.5px", fontWeight: 700, color: "var(--hs-text)" }}>{s.name}</p>
+            <p style={{ margin: 0, fontSize: "11.5px", color: "var(--hs-dim)" }}>{s.email}</p>
+          </div>
+        </div>
+      ),
+    },
+    { key: "rollNo", header: "Roll no", render: (s) => s.rollNo || "—" },
+    { key: "branch", header: "Branch", render: (s) => s.branch || "—" },
+    {
+      key: "cgpa",
+      header: "CGPA",
+      render: (s) =>
+        s.cgpa != null ? (
+          <span style={{ fontWeight: 700, color: "var(--hs-text)", fontVariantNumeric: "tabular-nums" }}>{s.cgpa}</span>
+        ) : (
+          "—"
+        ),
+    },
+    {
+      key: "skills",
+      header: "Skills",
+      render: (s) => (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", maxWidth: "260px" }}>
+          {(s.skills || []).slice(0, 4).map((sk) => (
+            <span key={sk} className="hs-chip" style={{ fontSize: "10px", padding: "2px 9px" }}>
+              {sk}
+            </span>
+          ))}
+          {(s.skills || []).length > 4 && (
+            <span style={{ fontSize: "10.5px", color: "var(--hs-dim)", alignSelf: "center" }}>
+              +{s.skills.length - 4}
+            </span>
+          )}
+          {(s.skills || []).length === 0 && <span style={{ color: "var(--hs-dim)" }}>—</span>}
+        </div>
+      ),
+    },
+  ];
 
   return (
     <div>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "14px", marginBottom: "24px" }}>
-        <div>
-          <h1 style={{ margin: 0, fontSize: "24px", fontWeight: 800, color: "#fff" }}>Students</h1>
-          <p style={{ margin: "6px 0 0", fontSize: "13px", color: "#a897c9" }}>{students.length} students on your campus roster.</p>
-        </div>
-
-        <label
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            padding: "11px 20px",
-            borderRadius: "999px",
-            fontSize: "13px",
-            fontWeight: 700,
-            color: "#fff",
-            background: "linear-gradient(to right,#8b5cf6,#d946ef)",
-            cursor: uploading ? "not-allowed" : "pointer",
-            opacity: uploading ? 0.6 : 1,
-            boxShadow: "0 0 24px rgba(217,70,239,0.25)",
-          }}
-        >
-          <Upload size={15} />
-          {uploading ? "Importing..." : "Import Excel/CSV"}
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".xlsx,.xls,.csv"
-            onChange={handleFileChange}
-            disabled={uploading}
-            style={{ display: "none" }}
-          />
-        </label>
-      </div>
-
-      {/* Filters */}
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", marginBottom: "20px" }}>
-        <div style={{ position: "relative", flex: "1 1 260px" }}>
-          <Search size={16} color="#7c6f93" style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)" }} />
-          <input
+      <PageHeader
+        eyebrow="Campus roster"
+        icon={Users2}
+        title="Students"
+        liveLabel={`${students.length} ON ROSTER`}
+        subtitle={
+          <>
+            <b style={{ color: "var(--hs-text)" }}>
+              <Counter value={students.length} />
+            </b>{" "}
+            student{students.length === 1 ? "" : "s"} onboarded. Import a sheet to add more in bulk.
+          </>
+        }
+        actions={
+          <label
+            className={uploading ? undefined : "hs-btn hs-sheen"}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "8px",
+              padding: "12px 22px",
+              borderRadius: "var(--hs-r-full)",
+              fontSize: "13.5px",
+              fontWeight: 700,
+              color: "#fff",
+              background: uploading ? "rgba(255,255,255,0.08)" : undefined,
+              border: uploading ? "1px solid var(--hs-line)" : undefined,
+              cursor: uploading ? "not-allowed" : "pointer",
+            }}
+          >
+            <Upload size={15} />
+            {uploading ? "Importing…" : "Import Excel/CSV"}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              onChange={handleFileChange}
+              disabled={uploading}
+              style={{ display: "none" }}
+            />
+          </label>
+        }
+      >
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "11px", alignItems: "center" }}>
+          <SearchField
+            icon={Search}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by name, email, or roll no..."
-            style={{
-              width: "100%",
-              boxSizing: "border-box",
-              padding: "10px 14px 10px 40px",
-              borderRadius: "10px",
-              border: "1px solid rgba(216,180,254,0.12)",
-              background: "#170f28",
-              color: "#fff",
-              fontSize: "14px",
-              outline: "none",
-            }}
+            onClear={() => setSearch("")}
+            placeholder="Search by name, email or roll no…"
           />
         </div>
-        <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
-          {branches.map((b) => (
-            <button
-              key={b}
-              onClick={() => setBranchFilter(b)}
-              style={{
-                padding: "9px 16px",
-                borderRadius: "999px",
-                fontSize: "12px",
-                fontWeight: 600,
-                border: "1px solid rgba(216,180,254,0.12)",
-                background: branchFilter === b ? "linear-gradient(to right,#8b5cf6,#d946ef)" : "transparent",
-                color: "#fff",
-                cursor: "pointer",
-                textTransform: "capitalize",
-              }}
-            >
-              {b}
-            </button>
-          ))}
-        </div>
-      </div>
+      </PageHeader>
 
-      {loading ? (
-        <p style={{ color: "#a897c9" }}>Loading students...</p>
-      ) : (
-        <div style={{ borderRadius: "16px", border: "1px solid rgba(216,180,254,0.1)", overflow: "hidden", background: "#170f28" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr style={{ borderBottom: "1px solid rgba(216,180,254,0.08)" }}>
-                {["Student", "Roll No", "Branch", "CGPA", "Skills"].map((h) => (
-                  <th key={h} style={{ textAlign: "left", padding: "14px 20px", fontSize: "11px", fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: "#7c6f93" }}>
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((s) => (
-                <tr key={s._id} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-                  <td style={{ padding: "14px 20px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                      <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: "linear-gradient(135deg,#8b5cf6,#d946ef)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: 700, color: "#fff", flexShrink: 0 }}>
-                        <GraduationCap size={14} />
-                      </div>
-                      <div>
-                        <p style={{ margin: 0, fontSize: "13.5px", fontWeight: 600, color: "#fff" }}>{s.name}</p>
-                        <p style={{ margin: 0, fontSize: "12px", color: "#7c6f93" }}>{s.email}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td style={{ padding: "14px 20px", color: "#c4b5fd", fontSize: "13px" }}>{s.rollNo || "—"}</td>
-                  <td style={{ padding: "14px 20px", color: "#c4b5fd", fontSize: "13px" }}>{s.branch || "—"}</td>
-                  <td style={{ padding: "14px 20px", color: "#c4b5fd", fontSize: "13px" }}>{s.cgpa ?? "—"}</td>
-                  <td style={{ padding: "14px 20px" }}>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", maxWidth: "260px" }}>
-                      {(s.skills || []).slice(0, 4).map((sk) => (
-                        <span key={sk} style={{ fontSize: "10.5px", fontWeight: 600, color: "#f0abfc", background: "rgba(217,70,239,0.1)", padding: "3px 8px", borderRadius: "999px" }}>
-                          {sk}
-                        </span>
-                      ))}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {filtered.length === 0 && (
-                <tr>
-                  <td colSpan={5} style={{ padding: "40px", textAlign: "center", color: "#544468" }}>
-                    No students match your search.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+      {branchOptions.length > 1 && (
+        <FilterChips
+          options={branchOptions}
+          value={branchFilter}
+          onChange={setBranchFilter}
+          layoutId="hs-branch-pill"
+          style={{ marginBottom: "20px" }}
+        />
       )}
 
-      {/* Import summary modal */}
-      <AnimatePresence>
-        {importSummary && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setImportSummary(null)}
-            style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", zIndex: 100 }}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              onClick={(e) => e.stopPropagation()}
-              style={{ width: "100%", maxWidth: "480px", background: "#1a1030", border: "1px solid rgba(216,180,254,0.15)", borderRadius: "20px", padding: "26px", boxSizing: "border-box" }}
+      {loading ? (
+        <Loader label="Loading students" />
+      ) : (
+        <DataTable
+          columns={columns}
+          rows={filtered}
+          empty={students.length === 0 ? "No students yet — import a sheet to get started." : "No students match your search."}
+        />
+      )}
+
+      {/* ── Import summary ────────────────────────────────────────────────── */}
+      <Modal
+        open={Boolean(importSummary)}
+        onClose={() => setImportSummary(null)}
+        title="Import summary"
+        subtitle="What happened to each row"
+        icon={Upload}
+        width={500}
+      >
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", gap: "10px", marginBottom: "18px" }}>
+          {[
+            { label: "Total rows", value: importSummary?.summary?.totalRows, tone: "var(--hs-a1-rgb)" },
+            { label: "Created", value: importSummary?.summary?.created, tone: "var(--hs-ok-rgb)" },
+            { label: "Linked", value: importSummary?.summary?.linked, tone: "var(--hs-a3-rgb)" },
+            { label: "Skipped", value: importSummary?.summary?.skipped, tone: "var(--hs-warn-rgb)" },
+          ].map((s) => (
+            <div
+              key={s.label}
+              style={{
+                background: `rgba(${s.tone},0.08)`,
+                border: `1px solid rgba(${s.tone},0.2)`,
+                borderRadius: "var(--hs-r)",
+                padding: "13px",
+              }}
             >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-                <h3 style={{ margin: 0, fontSize: "17px", fontWeight: 800, color: "#fff" }}>Import Summary</h3>
-                <button onClick={() => setImportSummary(null)} style={{ border: "none", background: "transparent", color: "#a897c9", cursor: "pointer" }}>
-                  <X size={18} />
-                </button>
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: "10px", marginBottom: "16px" }}>
-                {[
-                  { label: "Total Rows", value: importSummary.summary?.totalRows },
-                  { label: "Created", value: importSummary.summary?.created },
-                  { label: "Linked", value: importSummary.summary?.linked },
-                  { label: "Skipped", value: importSummary.summary?.skipped },
-                ].map((s) => (
-                  <div key={s.label} style={{ background: "rgba(255,255,255,0.03)", borderRadius: "12px", padding: "12px" }}>
-                    <p style={{ margin: 0, fontSize: "18px", fontWeight: 800, color: "#fff" }}>{s.value ?? 0}</p>
-                    <p style={{ margin: 0, fontSize: "11px", color: "#a897c9" }}>{s.label}</p>
-                  </div>
-                ))}
-              </div>
-
-              <p style={{ fontSize: "12px", color: "#a897c9", display: "flex", alignItems: "center", gap: "6px", marginBottom: "10px" }}>
-                <CheckCircle2 size={13} color="#34d399" />
-                {importSummary.emails?.sent || 0} credential emails sent
+              <p style={{ margin: 0, fontSize: "20px", fontWeight: 800, color: `rgb(${s.tone})` }}>
+                <Counter value={s.value ?? 0} />
               </p>
+              <p style={{ margin: 0, fontSize: "11px", color: "var(--hs-muted)" }}>{s.label}</p>
+            </div>
+          ))}
+        </div>
 
-              {importSummary.summary?.errors?.length > 0 && (
-                <div style={{ maxHeight: "160px", overflowY: "auto", marginTop: "10px" }}>
-                  {importSummary.summary.errors.slice(0, 10).map((e, i) => (
-                    <p key={i} style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11.5px", color: "#fca5a5", margin: "4px 0" }}>
-                      <AlertTriangle size={11} /> Row {e.row}: {e.reason}
-                    </p>
-                  ))}
-                </div>
-              )}
-            </motion.div>
-          </motion.div>
+        <p
+          style={{
+            fontSize: "12.5px",
+            color: "var(--hs-muted)",
+            display: "flex",
+            alignItems: "center",
+            gap: "7px",
+            margin: 0,
+          }}
+        >
+          <CheckCircle2 size={14} style={{ color: "var(--hs-ok)" }} />
+          {importSummary?.emails?.sent || 0} credential email
+          {(importSummary?.emails?.sent || 0) === 1 ? "" : "s"} sent
+        </p>
+
+        {importSummary?.summary?.errors?.length > 0 && (
+          <div
+            style={{
+              maxHeight: "170px",
+              overflowY: "auto",
+              marginTop: "14px",
+              padding: "12px 14px",
+              borderRadius: "var(--hs-r-sm)",
+              background: "rgba(var(--hs-bad-rgb),0.06)",
+              border: "1px solid rgba(var(--hs-bad-rgb),0.18)",
+            }}
+          >
+            {importSummary.summary.errors.slice(0, 10).map((e, i) => (
+              <p
+                key={i}
+                style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: "7px",
+                  fontSize: "11.5px",
+                  color: "var(--hs-bad)",
+                  margin: "5px 0",
+                  lineHeight: 1.5,
+                }}
+              >
+                <AlertTriangle size={12} style={{ flexShrink: 0, marginTop: "2px" }} /> Row {e.row}: {e.reason}
+              </p>
+            ))}
+          </div>
         )}
-      </AnimatePresence>
+      </Modal>
     </div>
   );
 };

@@ -1,31 +1,14 @@
 // src/pages/tpo/TPOCollegeSetup.jsx
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
 import toast from "react-hot-toast";
-import { School, Globe, MapPin, ShieldCheck, ShieldAlert, ArrowRight } from "lucide-react";
+import { School, Globe, MapPin, ShieldCheck, ShieldAlert, ArrowRight, Building2 } from "lucide-react";
 import { registerCollege, getCollegeById } from "../../api/college.api";
 import { useAuth } from "../../hooks/useAuth";
-
-const inputStyle = {
-  width: "100%",
-  boxSizing: "border-box",
-  borderRadius: "10px",
-  padding: "12px 16px",
-  fontSize: "14px",
-  background: "#0e0819",
-  color: "#fff",
-  border: "1px solid rgba(216,180,254,0.15)",
-  outline: "none",
-};
-
-const labelStyle = {
-  display: "block",
-  marginBottom: "6px",
-  fontSize: "12px",
-  fontWeight: 700,
-  letterSpacing: "0.03em",
-  color: "#a897c9",
-};
+import SpotlightCard from "../../components/fx/SpotlightCard";
+import MagneticButton from "../../components/fx/MagneticButton";
+import Aurora from "../../components/fx/Aurora";
+import Loader from "../../components/fx/Loader";
+import { FormField, Input } from "../../components/forms/FormField";
 
 // The backend doesn't expose a "get my college" endpoint for TPOs — the
 // college returned right after registration is cached locally so we can show
@@ -48,10 +31,9 @@ const TPOCollegeSetup = () => {
           const cachedTpoId = typeof parsed.tpo === "string" ? parsed.tpo : parsed.tpo?._id;
 
           // Defense in depth against the sessionStorage key not being
-          // per-user: if the cached college belongs to a different TPO
-          // than the one currently logged in (e.g. a previous account that
-          // was deleted, replaced by a new one in the same browser tab),
-          // throw the cache away instead of trusting it.
+          // per-user: if the cached college belongs to a different TPO than
+          // the one currently logged in (e.g. a previous account replaced by
+          // a new one in the same browser tab), throw the cache away.
           if (cachedTpoId && user?.id && cachedTpoId !== user.id) {
             sessionStorage.removeItem(CACHE_KEY);
           } else {
@@ -90,92 +72,171 @@ const TPOCollegeSetup = () => {
     }
   };
 
-  if (checking) return <p style={{ color: "#a897c9" }}>Checking college status...</p>;
+  if (checking) return <Loader label="Checking college status" full />;
 
+  /* ── Registered ─────────────────────────────────────────────────────── */
   if (college) {
+    const verified = Boolean(college.isVerified);
+    const tone = verified ? "var(--hs-ok-rgb)" : "var(--hs-warn-rgb)";
+    const Icon = verified ? ShieldCheck : ShieldAlert;
+
     return (
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        style={{ maxWidth: "560px", margin: "0 auto", background: "#170f28", border: "1px solid rgba(216,180,254,0.1)", borderRadius: "24px", padding: "34px" }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: "14px", marginBottom: "20px" }}>
-          <div style={{ width: "52px", height: "52px", borderRadius: "16px", background: "linear-gradient(135deg,#8b5cf6,#d946ef)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <School size={24} color="#fff" />
+      <div style={{ maxWidth: "580px", margin: "0 auto" }}>
+        <SpotlightCard hover={false} live={verified} padding={0} style={{ overflow: "hidden" }}>
+          <div style={{ position: "relative", padding: "32px 32px 26px", overflow: "hidden" }}>
+            <Aurora particles={false} grain={false} blobOpacity={0.4} intensity={0.7} />
+
+            <div style={{ position: "relative", zIndex: 2, display: "flex", alignItems: "center", gap: "16px" }}>
+              <div
+                style={{
+                  width: "56px",
+                  height: "56px",
+                  flexShrink: 0,
+                  borderRadius: "var(--hs-r-lg)",
+                  display: "grid",
+                  placeItems: "center",
+                  background: "rgba(var(--hs-a2-rgb),0.14)",
+                  border: "1px solid rgba(var(--hs-a2-rgb),0.3)",
+                }}
+              >
+                <School size={25} style={{ color: "var(--hs-a3)" }} />
+              </div>
+
+              <div style={{ minWidth: 0 }}>
+                <h1 style={{ margin: 0, fontSize: "21px", fontWeight: 900, color: "var(--hs-text)" }}>
+                  {college.name}
+                </h1>
+                {college.address && (
+                  <p
+                    style={{
+                      margin: "4px 0 0",
+                      fontSize: "12.5px",
+                      color: "var(--hs-muted)",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "5px",
+                    }}
+                  >
+                    <MapPin size={12} /> {college.address}
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
-          <div>
-            <h1 style={{ margin: 0, fontSize: "20px", fontWeight: 800, color: "#fff" }}>{college.name}</h1>
-            {college.address && (
-              <p style={{ margin: "2px 0 0", fontSize: "12.5px", color: "#a897c9", display: "flex", alignItems: "center", gap: "5px" }}>
-                <MapPin size={12} /> {college.address}
-              </p>
+
+          <div style={{ padding: "0 32px 32px" }}>
+            {college.website && (
+              <a
+                href={college.website}
+                target="_blank"
+                rel="noreferrer"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "7px",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  color: "var(--hs-a2)",
+                  marginBottom: "20px",
+                }}
+              >
+                <Globe size={13} /> {college.website}
+              </a>
             )}
-          </div>
-        </div>
 
-        {college.website && (
-          <a href={college.website} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", color: "#c4b5fd", textDecoration: "none", marginBottom: "20px" }}>
-            <Globe size={13} /> {college.website}
-          </a>
-        )}
-
-        {college.isVerified ? (
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "14px 16px", borderRadius: "14px", background: "rgba(52,211,153,0.1)", border: "1px solid rgba(52,211,153,0.2)" }}>
-            <ShieldCheck size={20} color="#6ee7b7" />
-            <div>
-              <p style={{ margin: 0, fontSize: "13px", fontWeight: 700, color: "#6ee7b7" }}>Verified</p>
-              <p style={{ margin: 0, fontSize: "12px", color: "#a897c9" }}>Your college is verified — you can post drives freely.</p>
+            <div
+              className={verified ? undefined : "hs-sheen"}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "13px",
+                padding: "16px 18px",
+                borderRadius: "var(--hs-r)",
+                background: `rgba(${tone},0.09)`,
+                border: `1px solid rgba(${tone},0.24)`,
+              }}
+            >
+              <div style={{ position: "relative", flexShrink: 0, color: `rgb(${tone})`, display: "grid" }}>
+                <Icon size={21} />
+              </div>
+              <div>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: "13.5px",
+                    fontWeight: 800,
+                    color: `rgb(${tone})`,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                  }}
+                >
+                  {verified ? "Verified" : "Awaiting verification"}
+                  <span className="hs-pulse-dot" style={{ width: 6, height: 6 }} />
+                </p>
+                <p style={{ margin: "3px 0 0", fontSize: "12.5px", color: "var(--hs-muted)", lineHeight: 1.6 }}>
+                  {verified
+                    ? "Your college is verified — you can post drives freely."
+                    : "An admin needs to verify your college before you can post drives."}
+                </p>
+              </div>
             </div>
           </div>
-        ) : (
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "14px 16px", borderRadius: "14px", background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.2)" }}>
-            <ShieldAlert size={20} color="#fcd34d" />
-            <div>
-              <p style={{ margin: 0, fontSize: "13px", fontWeight: 700, color: "#fcd34d" }}>Awaiting Verification</p>
-              <p style={{ margin: 0, fontSize: "12px", color: "#a897c9" }}>An admin needs to verify your college before you can post drives.</p>
-            </div>
-          </div>
-        )}
-      </motion.div>
+        </SpotlightCard>
+      </div>
     );
   }
 
+  /* ── Registration form ──────────────────────────────────────────────── */
   return (
-    <motion.form
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      onSubmit={handleSubmit}
-      style={{ maxWidth: "480px", margin: "0 auto", background: "#170f28", border: "1px solid rgba(216,180,254,0.1)", borderRadius: "24px", padding: "34px" }}
-    >
-      <div style={{ width: "52px", height: "52px", borderRadius: "16px", background: "linear-gradient(135deg,#8b5cf6,#d946ef)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "18px" }}>
-        <School size={24} color="#fff" />
-      </div>
-      <h1 style={{ margin: "0 0 6px", fontSize: "21px", fontWeight: 800, color: "#fff" }}>Register your College</h1>
-      <p style={{ margin: "0 0 26px", fontSize: "13px", color: "#a897c9" }}>
-        One college per TPO account. It'll need admin verification before you can post drives.
-      </p>
+    <div style={{ maxWidth: "500px", margin: "0 auto" }}>
+      <SpotlightCard hover={false} live padding={34}>
+        <div
+          style={{
+            width: "56px",
+            height: "56px",
+            borderRadius: "var(--hs-r-lg)",
+            display: "grid",
+            placeItems: "center",
+            background: "rgba(var(--hs-a2-rgb),0.14)",
+            border: "1px solid rgba(var(--hs-a2-rgb),0.3)",
+            marginBottom: "20px",
+          }}
+        >
+          <School size={25} style={{ color: "var(--hs-a3)" }} />
+        </div>
 
-      <div style={{ marginBottom: "16px" }}>
-        <label style={labelStyle}>College Name</label>
-        <input name="name" value={form.name} onChange={handleChange} required style={inputStyle} />
-      </div>
-      <div style={{ marginBottom: "16px" }}>
-        <label style={labelStyle}>Address</label>
-        <input name="address" value={form.address} onChange={handleChange} style={inputStyle} />
-      </div>
-      <div style={{ marginBottom: "26px" }}>
-        <label style={labelStyle}>Website</label>
-        <input name="website" value={form.website} onChange={handleChange} placeholder="https://..." style={inputStyle} />
-      </div>
+        <h1 style={{ margin: "0 0 7px", fontSize: "22px", fontWeight: 900, color: "var(--hs-text)" }}>
+          Register your college
+        </h1>
+        <p style={{ margin: "0 0 26px", fontSize: "13px", lineHeight: 1.65, color: "var(--hs-muted)" }}>
+          One college per placement-cell account. It needs admin verification before you can post drives.
+        </p>
 
-      <button
-        type="submit"
-        disabled={submitting}
-        style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", border: "none", borderRadius: "999px", padding: "13px", fontSize: "14px", fontWeight: 700, color: "#fff", background: "linear-gradient(to right,#8b5cf6,#d946ef)", cursor: submitting ? "not-allowed" : "pointer", opacity: submitting ? 0.6 : 1 }}
-      >
-        {submitting ? "Registering..." : "Register College"} <ArrowRight size={15} />
-      </button>
-    </motion.form>
+        <form onSubmit={handleSubmit}>
+          <FormField label="College name" icon={Building2}>
+            <Input name="name" value={form.name} onChange={handleChange} required placeholder="Example Institute of Technology" />
+          </FormField>
+
+          <FormField label="Address" icon={MapPin}>
+            <Input name="address" value={form.address} onChange={handleChange} placeholder="City, State" />
+          </FormField>
+
+          <FormField label="Website" icon={Globe} marginBottom={26}>
+            <Input name="website" value={form.website} onChange={handleChange} placeholder="https://…" />
+          </FormField>
+
+          <MagneticButton
+            type="submit"
+            disabled={submitting}
+            strength={0.1}
+            style={{ width: "100%", padding: "14px", fontSize: "14px" }}
+          >
+            {submitting ? "Registering…" : "Register college"} <ArrowRight size={15} />
+          </MagneticButton>
+        </form>
+      </SpotlightCard>
+    </div>
   );
 };
 

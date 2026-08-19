@@ -4,7 +4,10 @@ import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { Bookmark } from "lucide-react";
 import JobCard from "../../components/candidate/JobCard";
-import EmptyState from "../../components/candidate/EmptyState";
+import EmptyState from "../../components/fx/EmptyState";
+import PageHeader from "../../components/fx/PageHeader";
+import MagneticButton from "../../components/fx/MagneticButton";
+import { SkeletonGrid } from "../../components/fx/Skeleton";
 import { getSavedJobs, applyToJob, getMyApplications } from "../../api/applications.api";
 
 const SavedJobs = () => {
@@ -44,17 +47,30 @@ const SavedJobs = () => {
     }
   };
 
-  if (loading) return <p style={{ color: "#a897c9" }}>Loading saved jobs...</p>;
-
   return (
     <div>
-      <div style={{ marginBottom: "22px" }}>
-        <h1 style={{ margin: 0, fontSize: "24px", fontWeight: 800, color: "#fff" }}>Saved Jobs</h1>
-        <p style={{ margin: "6px 0 0", fontSize: "13.5px", color: "#a897c9" }}>{jobs.length} jobs bookmarked for later.</p>
-      </div>
+      <PageHeader
+        eyebrow="Shortlist"
+        icon={Bookmark}
+        title="Saved jobs"
+        live={false}
+        subtitle={`${jobs.length} job${jobs.length === 1 ? "" : "s"} bookmarked for later.`}
+        actions={
+          <MagneticButton to="/candidate/jobs" variant="ghost" style={{ fontSize: "13px" }}>
+            Browse more
+          </MagneticButton>
+        }
+      />
 
-      {jobs.length === 0 ? (
-        <EmptyState icon={Bookmark} title="Nothing saved yet" subtitle="Bookmark jobs while browsing to build a shortlist here." />
+      {loading ? (
+        <SkeletonGrid count={3} />
+      ) : jobs.length === 0 ? (
+        <EmptyState
+          icon={Bookmark}
+          title="Nothing saved yet"
+          subtitle="Bookmark roles while browsing to build a shortlist you can come back to."
+          action={<MagneticButton to="/candidate/jobs">Browse jobs</MagneticButton>}
+        />
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "18px" }}>
           {jobs.map((job) => (

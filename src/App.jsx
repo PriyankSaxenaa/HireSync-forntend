@@ -7,6 +7,7 @@ import RoleGuard from "./components/common/RoleGuard";
 import DashboardLayout from "./layouts/DashboardLayout";
 import ForgotPassword from "./pages/auth/ForgotPassword";
 
+import ScrollProgress from "./components/fx/ScrollProgress";
 
 import Landing from "./pages/landing/Landing";
 import Login from "./pages/auth/Login";
@@ -41,12 +42,30 @@ import Profile from "./pages/candidate/Profile";
 import NotFound from "./pages/landing/NotFound";
 import AccountDeletionGuard from "./components/common/AccountDeletionGuard";
 
+const toastOptions = {
+  duration: 3200,
+  style: {
+    background: "#0f0f12",
+    color: "#f2f1ee",
+    border: "1px solid rgba(255,255,255,0.12)",
+    borderRadius: "10px",
+    fontSize: "13.5px",
+    fontWeight: 600,
+    padding: "12px 16px",
+    boxShadow: "0 18px 50px rgba(0,0,0,0.55)",
+  },
+  success: { iconTheme: { primary: "#2fae72", secondary: "#0f0f12" } },
+  error: { iconTheme: { primary: "#cf3355", secondary: "#0f0f12" } },
+};
 
 function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <Toaster position="top-center" />
+        {/* Global ambience — a scroll rail on every route */}
+        <ScrollProgress />
+
+        <Toaster position="top-center" toastOptions={toastOptions} />
         <AccountDeletionGuard />
         <Routes>
           <Route path="/" element={<Landing />} />

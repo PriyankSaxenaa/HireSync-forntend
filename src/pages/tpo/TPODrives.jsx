@@ -1,10 +1,9 @@
 // src/pages/tpo/TPODrives.jsx
 import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import toast from "react-hot-toast";
 import {
   Plus,
-  X,
   Building2,
   CalendarClock,
   Download,
@@ -13,6 +12,9 @@ import {
   ThumbsUp,
   ThumbsDown,
   MinusCircle,
+  Link2,
+  FileText,
+  Target,
 } from "lucide-react";
 import {
   getDrives,
@@ -23,33 +25,14 @@ import {
 } from "../../api/tpo.api";
 import { getPlacementGroups } from "../../api/placementGroups.api";
 import CollegeGateNotice from "../../components/tpo/CollegeGateNotice";
-
-const STATUS_COLORS = {
-  upcoming: { bg: "rgba(251,191,36,0.15)", color: "#fcd34d" },
-  ongoing: { bg: "rgba(217,70,239,0.15)", color: "#f0abfc" },
-  closed: { bg: "rgba(148,163,184,0.15)", color: "#cbd5e1" },
-};
-
-const inputStyle = {
-  width: "100%",
-  boxSizing: "border-box",
-  borderRadius: "10px",
-  padding: "11px 14px",
-  fontSize: "14px",
-  background: "#0e0819",
-  color: "#fff",
-  border: "1px solid rgba(216,180,254,0.15)",
-  outline: "none",
-};
-
-const labelStyle = {
-  display: "block",
-  marginBottom: "6px",
-  fontSize: "12px",
-  fontWeight: 700,
-  letterSpacing: "0.03em",
-  color: "#a897c9",
-};
+import PageHeader from "../../components/fx/PageHeader";
+import SpotlightCard from "../../components/fx/SpotlightCard";
+import EmptyState from "../../components/fx/EmptyState";
+import MagneticButton from "../../components/fx/MagneticButton";
+import Modal from "../../components/fx/Modal";
+import Counter from "../../components/fx/Counter";
+import Loader from "../../components/fx/Loader";
+import { FormField, Input, TextArea } from "../../components/forms/FormField";
 
 const emptyForm = {
   company: "",
@@ -59,6 +42,13 @@ const emptyForm = {
   targetType: "all",
   targetPlacementGroups: [],
   deadline: "",
+};
+
+// Colour the status <select> to match the status it currently shows.
+const STATUS_TONE = {
+  upcoming: "var(--hs-warn-rgb)",
+  ongoing: "var(--hs-a2-rgb)",
+  closed: "148,163,184",
 };
 
 const TPODrives = () => {
@@ -165,117 +155,216 @@ const TPODrives = () => {
     }
   };
 
-  if (gateStatus) {
-    return <CollegeGateNotice status={gateStatus} />;
-  }
+  if (gateStatus) return <CollegeGateNotice status={gateStatus} />;
+
+  const openCount = drives.filter((d) => d.status !== "closed").length;
+
+  const iconBtn = {
+    width: "36px",
+    height: "36px",
+    flexShrink: 0,
+    display: "grid",
+    placeItems: "center",
+    border: "1px solid var(--hs-line)",
+    borderRadius: "var(--hs-r-full)",
+    background: "transparent",
+    color: "var(--hs-muted)",
+    transition: "all 0.2s var(--hs-ease)",
+  };
 
   return (
     <div>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "14px", marginBottom: "24px" }}>
-        <div>
-          <h1 style={{ margin: 0, fontSize: "24px", fontWeight: 800, color: "#fff" }}>Campus Drives</h1>
-          <p style={{ margin: "6px 0 0", fontSize: "13px", color: "#a897c9" }}>{drives.length} drives posted so far.</p>
-        </div>
-        <button
-          onClick={() => setModalOpen(true)}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            border: "none",
-            borderRadius: "999px",
-            padding: "12px 22px",
-            fontSize: "14px",
-            fontWeight: 700,
-            color: "#fff",
-            background: "linear-gradient(to right,#8b5cf6,#d946ef)",
-            cursor: "pointer",
-            boxShadow: "0 0 24px rgba(217,70,239,0.3)",
-          }}
-        >
-          <Plus size={16} /> Post a Drive
-        </button>
-      </div>
+      <PageHeader
+        eyebrow="Recruitment"
+        icon={CalendarClock}
+        title="Campus drives"
+        liveLabel={openCount > 0 ? `${openCount} OPEN` : "NONE OPEN"}
+        subtitle={
+          <>
+            <b style={{ color: "var(--hs-text)" }}>
+              <Counter value={drives.length} />
+            </b>{" "}
+            drive{drives.length === 1 ? "" : "s"} posted. Students are notified the moment you publish.
+          </>
+        }
+        actions={
+          <MagneticButton onClick={() => setModalOpen(true)}>
+            <Plus size={16} /> Post a drive
+          </MagneticButton>
+        }
+      />
 
       {loading ? (
-        <p style={{ color: "#a897c9" }}>Loading drives...</p>
+        <Loader label="Loading drives" />
       ) : drives.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "60px 20px", color: "#544468", border: "1px dashed rgba(216,180,254,0.15)", borderRadius: "20px" }}>
-          No drives posted yet. Post your first one to reach your students.
-        </div>
+        <EmptyState
+          icon={CalendarClock}
+          title="No drives posted yet"
+          subtitle="Post your first drive to reach your students — they get a realtime notification."
+          action={
+            <MagneticButton onClick={() => setModalOpen(true)}>
+              <Plus size={15} /> Post your first drive
+            </MagneticButton>
+          }
+        />
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
           {drives.map((d) => {
-            const status = STATUS_COLORS[d.status] || STATUS_COLORS.ongoing;
             const isExpanded = expandedId === d.id;
             const detail = details[d.id];
+            const tone = STATUS_TONE[d.status] || STATUS_TONE.ongoing;
+
             return (
-              <div key={d.id} style={{ background: "#170f28", border: "1px solid rgba(216,180,254,0.1)", borderRadius: "18px", overflow: "hidden" }}>
+              <SpotlightCard
+                key={d.id}
+                hover={false}
+                live={d.status === "ongoing"}
+                padding={0}
+                style={{ overflow: "hidden" }}
+              >
                 <div style={{ padding: "20px", display: "flex", flexWrap: "wrap", alignItems: "center", gap: "14px" }}>
-                  <div style={{ width: "42px", height: "42px", borderRadius: "12px", background: "linear-gradient(135deg,#8b5cf6,#d946ef)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <Building2 size={18} color="#fff" />
+                  <div
+                    style={{
+                      width: "44px",
+                      height: "44px",
+                      flexShrink: 0,
+                      borderRadius: "var(--hs-r-lg)",
+                      display: "grid",
+                      placeItems: "center",
+                      background: "rgba(var(--hs-a2-rgb),0.14)",
+                      border: "1px solid rgba(var(--hs-a2-rgb),0.3)",
+                    }}
+                  >
+                    <Building2 size={19} style={{ color: "var(--hs-a3)" }} />
                   </div>
+
                   <div style={{ flex: "1 1 220px", minWidth: 0 }}>
-                    <p style={{ margin: 0, fontSize: "15px", fontWeight: 700, color: "#fff" }}>{d.title}</p>
-                    <p style={{ margin: "2px 0 0", fontSize: "12.5px", color: "#a897c9" }}>{d.company}</p>
+                    <p style={{ margin: 0, fontSize: "15px", fontWeight: 800, color: "var(--hs-text)" }}>{d.title}</p>
+                    <p style={{ margin: "2px 0 0", fontSize: "12.5px", color: "var(--hs-muted)" }}>{d.company}</p>
                   </div>
-                  <span style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "12px", color: "#a897c9" }}>
-                    <CalendarClock size={13} /> {new Date(d.deadline).toLocaleDateString()}
+
+                  <span
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      fontSize: "12px",
+                      color: "var(--hs-muted)",
+                    }}
+                  >
+                    <CalendarClock size={13} /> {d.deadline ? new Date(d.deadline).toLocaleDateString() : "—"}
                   </span>
+
                   <select
                     value={d.status}
                     onChange={(e) => handleStatusChange(d.id, e.target.value)}
-                    style={{ fontSize: "11px", fontWeight: 700, textTransform: "capitalize", color: status.color, background: status.bg, border: "none", padding: "6px 10px", borderRadius: "999px", cursor: "pointer" }}
+                    aria-label="Drive status"
+                    style={{
+                      fontSize: "11.5px",
+                      fontWeight: 700,
+                      textTransform: "capitalize",
+                      color: `rgb(${tone})`,
+                      background: `rgba(${tone},0.12)`,
+                      border: `1px solid rgba(${tone},0.3)`,
+                      padding: "7px 12px",
+                      borderRadius: "var(--hs-r-full)",
+                      cursor: "pointer",
+                      outline: "none",
+                    }}
                   >
                     <option value="upcoming">Upcoming</option>
                     <option value="ongoing">Ongoing</option>
                     <option value="closed">Closed</option>
                   </select>
+
                   <button
                     onClick={() => handleDownload(d.id, d.company, d.title)}
                     title="Download PDF report"
-                    style={{ width: "34px", height: "34px", display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid rgba(216,180,254,0.15)", borderRadius: "10px", background: "transparent", color: "#e9d5ff", cursor: "pointer" }}
+                    aria-label="Download PDF report"
+                    style={iconBtn}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = "rgba(var(--hs-a2-rgb),0.45)";
+                      e.currentTarget.style.color = "var(--hs-a2)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = "var(--hs-line)";
+                      e.currentTarget.style.color = "var(--hs-muted)";
+                    }}
                   >
                     <Download size={14} />
                   </button>
+
                   <button
                     onClick={() => toggleExpand(d.id)}
-                    style={{ width: "34px", height: "34px", display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid rgba(216,180,254,0.15)", borderRadius: "10px", background: "transparent", color: "#e9d5ff", cursor: "pointer" }}
+                    aria-expanded={isExpanded}
+                    aria-label="Toggle drive details"
+                    style={iconBtn}
                   >
-                    <motion.span animate={{ rotate: isExpanded ? 180 : 0 }}>
+                    <motion.span animate={{ rotate: isExpanded ? 180 : 0 }} style={{ display: "grid" }}>
                       <ChevronDown size={14} />
                     </motion.span>
                   </button>
                 </div>
 
-                <AnimatePresence>
+                <AnimatePresence initial={false}>
                   {isExpanded && (
                     <motion.div
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: "auto", opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
-                      style={{ overflow: "hidden", borderTop: "1px solid rgba(216,180,254,0.08)" }}
+                      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                      style={{ overflow: "hidden", borderTop: "1px solid var(--hs-line)" }}
                     >
                       <div style={{ padding: "18px 20px" }}>
                         {!detail ? (
-                          <p style={{ color: "#7c6f93", fontSize: "12px" }}>Loading details...</p>
+                          <Loader label="Loading details" size={40} />
                         ) : (
                           <>
                             {detail.drive?.description && (
-                              <p style={{ fontSize: "13px", color: "#e9d5ff", margin: "0 0 14px" }}>{detail.drive.description}</p>
+                              <p
+                                style={{
+                                  fontSize: "13px",
+                                  lineHeight: 1.7,
+                                  color: "var(--hs-muted)",
+                                  margin: "0 0 16px",
+                                }}
+                              >
+                                {detail.drive.description}
+                              </p>
                             )}
-                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "10px" }}>
+
+                            <div
+                              style={{
+                                display: "grid",
+                                gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))",
+                                gap: "10px",
+                              }}
+                            >
                               {[
-                                { icon: Users, label: "Targeted", value: detail.responseSummary?.totalTargeted, color: "#a78bfa" },
-                                { icon: ThumbsUp, label: "Interested", value: detail.responseSummary?.interested, color: "#34d399" },
-                                { icon: ThumbsDown, label: "Not Interested", value: detail.responseSummary?.notInterested, color: "#fb7185" },
-                                { icon: MinusCircle, label: "No Response", value: detail.responseSummary?.noResponse, color: "#94a3b8" },
-                              ].map((s) => (
-                                <div key={s.label} style={{ background: "rgba(255,255,255,0.03)", borderRadius: "12px", padding: "12px", textAlign: "center" }}>
-                                  <s.icon size={15} color={s.color} style={{ marginBottom: "4px" }} />
-                                  <p style={{ margin: 0, fontSize: "17px", fontWeight: 800, color: "#fff" }}>{s.value ?? 0}</p>
-                                  <p style={{ margin: 0, fontSize: "10.5px", color: "#a897c9" }}>{s.label}</p>
-                                </div>
+                                { icon: Users, label: "Targeted", value: detail.responseSummary?.totalTargeted, tone: "var(--hs-a1-rgb)" },
+                                { icon: ThumbsUp, label: "Interested", value: detail.responseSummary?.interested, tone: "var(--hs-ok-rgb)" },
+                                { icon: ThumbsDown, label: "Not interested", value: detail.responseSummary?.notInterested, tone: "var(--hs-bad-rgb)" },
+                                { icon: MinusCircle, label: "No response", value: detail.responseSummary?.noResponse, tone: "148,163,184" },
+                              ].map((s, i) => (
+                                <motion.div
+                                  key={s.label}
+                                  initial={{ opacity: 0, y: 10 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  transition={{ delay: i * 0.06 }}
+                                  style={{
+                                    background: `rgba(${s.tone},0.08)`,
+                                    border: `1px solid rgba(${s.tone},0.2)`,
+                                    borderRadius: "var(--hs-r)",
+                                    padding: "14px 12px",
+                                    textAlign: "center",
+                                  }}
+                                >
+                                  <s.icon size={16} style={{ color: `rgb(${s.tone})`, marginBottom: "6px" }} />
+                                  <p style={{ margin: 0, fontSize: "19px", fontWeight: 800, color: "var(--hs-text)" }}>
+                                    <Counter value={s.value ?? 0} />
+                                  </p>
+                                  <p style={{ margin: 0, fontSize: "10.5px", color: "var(--hs-muted)" }}>{s.label}</p>
+                                </motion.div>
                               ))}
                             </div>
                           </>
@@ -284,134 +373,123 @@ const TPODrives = () => {
                     </motion.div>
                   )}
                 </AnimatePresence>
-              </div>
+              </SpotlightCard>
             );
           })}
         </div>
       )}
 
-      {/* Create drive modal */}
-      <AnimatePresence>
-        {modalOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setModalOpen(false)}
-            style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", zIndex: 100 }}
-          >
-            <motion.form
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              onClick={(e) => e.stopPropagation()}
-              onSubmit={handleSubmit}
-              style={{ width: "100%", maxWidth: "560px", maxHeight: "90vh", overflowY: "auto", background: "#1a1030", border: "1px solid rgba(216,180,254,0.15)", borderRadius: "20px", padding: "28px", boxSizing: "border-box" }}
-            >
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "22px" }}>
-                <h2 style={{ margin: 0, fontSize: "19px", fontWeight: 800, color: "#fff" }}>Post a New Drive</h2>
-                <button type="button" onClick={() => setModalOpen(false)} style={{ width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid rgba(216,180,254,0.15)", borderRadius: "999px", background: "transparent", color: "#fff", cursor: "pointer" }}>
-                  <X size={15} />
-                </button>
-              </div>
+      {/* ── Post a drive ──────────────────────────────────────────────────── */}
+      <Modal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        title="Post a new drive"
+        subtitle="Everyone you target gets notified immediately."
+        icon={CalendarClock}
+        width={580}
+      >
+        <form onSubmit={handleSubmit}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "0 14px" }}>
+            <FormField label="Company" icon={Building2} marginBottom={16}>
+              <Input name="company" value={form.company} onChange={handleChange} required placeholder="Acme Inc." />
+            </FormField>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginBottom: "14px" }}>
-                <div>
-                  <label style={labelStyle}>Company</label>
-                  <input name="company" value={form.company} onChange={handleChange} required style={inputStyle} />
-                </div>
-                <div>
-                  <label style={labelStyle}>Drive Title</label>
-                  <input name="title" value={form.title} onChange={handleChange} required style={inputStyle} />
-                </div>
-              </div>
+            <FormField label="Drive title" icon={Target} marginBottom={16}>
+              <Input name="title" value={form.title} onChange={handleChange} required placeholder="SDE Campus Drive 2026" />
+            </FormField>
+          </div>
 
-              <div style={{ marginBottom: "14px" }}>
-                <label style={labelStyle}>Description</label>
-                <textarea name="description" value={form.description} onChange={handleChange} rows={3} style={{ ...inputStyle, resize: "vertical", fontFamily: "inherit" }} />
-              </div>
+          <FormField label="Description" icon={FileText} marginBottom={16}>
+            <TextArea
+              name="description"
+              value={form.description}
+              onChange={handleChange}
+              rows={3}
+              placeholder="Eligibility, rounds, package details…"
+            />
+          </FormField>
 
-              <div style={{ marginBottom: "14px" }}>
-                <label style={labelStyle}>Job Description Link / Notes</label>
-                <input name="jd" value={form.jd} onChange={handleChange} style={inputStyle} />
-              </div>
+          <FormField label="JD link / notes" icon={Link2} marginBottom={16}>
+            <Input name="jd" value={form.jd} onChange={handleChange} placeholder="https://… or free-text notes" />
+          </FormField>
 
-              <div style={{ marginBottom: "14px" }}>
-                <label style={labelStyle}>Audience</label>
-                <div style={{ display: "flex", gap: "8px", marginBottom: "10px" }}>
-                  {["all", "placementGroup"].map((t) => (
+          <FormField label="Audience" icon={Users} marginBottom={16}>
+            <div style={{ display: "flex", gap: "8px", marginBottom: form.targetType === "placementGroup" ? "12px" : 0, flexWrap: "wrap" }}>
+              {[
+                { key: "all", label: "All students" },
+                { key: "placementGroup", label: "Specific groups" },
+              ].map((t) => {
+                const active = form.targetType === t.key;
+                return (
+                  <button
+                    key={t.key}
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, targetType: t.key }))}
+                    style={{
+                      padding: "9px 17px",
+                      borderRadius: "var(--hs-r-full)",
+                      fontSize: "12px",
+                      fontWeight: 700,
+                      border: `1px solid ${active ? "transparent" : "var(--hs-line)"}`,
+                      background: active ? "var(--hs-a2)" : "transparent",
+                      color: active ? "#fff" : "var(--hs-muted)",
+                      transition: "all 0.22s var(--hs-ease)",
+                    }}
+                  >
+                    {t.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {form.targetType === "placementGroup" && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                {groups.length === 0 && (
+                  <p style={{ fontSize: "12px", color: "var(--hs-dim)" }}>
+                    No placement groups yet — create one first.
+                  </p>
+                )}
+                {groups.map((g) => {
+                  const picked = form.targetPlacementGroups.includes(g.id);
+                  return (
                     <button
-                      key={t}
+                      key={g.id}
                       type="button"
-                      onClick={() => setForm((f) => ({ ...f, targetType: t }))}
+                      onClick={() => toggleGroup(g.id)}
+                      aria-pressed={picked}
                       style={{
-                        padding: "9px 16px",
-                        borderRadius: "999px",
-                        fontSize: "12px",
+                        padding: "7px 14px",
+                        borderRadius: "var(--hs-r-full)",
+                        fontSize: "11.5px",
                         fontWeight: 700,
-                        border: "1px solid rgba(216,180,254,0.15)",
-                        background: form.targetType === t ? "linear-gradient(to right,#8b5cf6,#d946ef)" : "transparent",
-                        color: "#fff",
-                        cursor: "pointer",
+                        border: `1px solid ${picked ? "rgba(var(--hs-a2-rgb),0.55)" : "var(--hs-line)"}`,
+                        background: picked ? "rgba(var(--hs-a2-rgb),0.16)" : "transparent",
+                        color: picked ? "var(--hs-a2)" : "var(--hs-muted)",
+                        transition: "all 0.2s var(--hs-ease)",
                       }}
                     >
-                      {t === "all" ? "All Students" : "Specific Placement Groups"}
+                      {g.name} ({g.studentCount})
                     </button>
-                  ))}
-                </div>
-
-                {form.targetType === "placementGroup" && (
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-                    {groups.length === 0 && <p style={{ fontSize: "12px", color: "#7c6f93" }}>No placement groups yet — create one first.</p>}
-                    {groups.map((g) => (
-                      <button
-                        key={g.id}
-                        type="button"
-                        onClick={() => toggleGroup(g.id)}
-                        style={{
-                          padding: "7px 14px",
-                          borderRadius: "999px",
-                          fontSize: "11.5px",
-                          fontWeight: 600,
-                          border: "1px solid rgba(216,180,254,0.15)",
-                          background: form.targetPlacementGroups.includes(g.id) ? "rgba(217,70,239,0.2)" : "transparent",
-                          color: form.targetPlacementGroups.includes(g.id) ? "#f0abfc" : "#a897c9",
-                          cursor: "pointer",
-                        }}
-                      >
-                        {g.name} ({g.studentCount})
-                      </button>
-                    ))}
-                  </div>
-                )}
+                  );
+                })}
               </div>
+            )}
+          </FormField>
 
-              <div style={{ marginBottom: "24px" }}>
-                <label style={labelStyle}>Response Deadline</label>
-                <input type="datetime-local" name="deadline" value={form.deadline} onChange={handleChange} required style={inputStyle} />
-              </div>
+          <FormField label="Response deadline" icon={CalendarClock} marginBottom={24}>
+            <Input type="datetime-local" name="deadline" value={form.deadline} onChange={handleChange} required />
+          </FormField>
 
-              <button
-                type="submit"
-                disabled={submitting}
-                style={{
-                  width: "100%",
-                  border: "none",
-                  borderRadius: "999px",
-                  padding: "13px",
-                  fontSize: "14px",
-                  fontWeight: 700,
-                  color: "#fff",
-                  background: "linear-gradient(to right,#8b5cf6,#d946ef)",
-                  cursor: submitting ? "not-allowed" : "pointer",
-                  opacity: submitting ? 0.6 : 1,
-                }}
-              >
-                {submitting ? "Posting..." : "Post Drive"}
-              </button>
-            </motion.form>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          <MagneticButton
+            type="submit"
+            disabled={submitting}
+            strength={0.1}
+            style={{ width: "100%", padding: "14px", fontSize: "14px" }}
+          >
+            {submitting ? "Posting…" : "Post drive"}
+          </MagneticButton>
+        </form>
+      </Modal>
     </div>
   );
 };

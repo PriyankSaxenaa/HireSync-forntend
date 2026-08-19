@@ -1,41 +1,37 @@
 // src/pages/candidate/CampusDriveDetails.jsx
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import toast from "react-hot-toast";
-import { ArrowLeft, CalendarClock, ThumbsUp, ThumbsDown } from "lucide-react";
-import GlowCard from "../../components/candidate/GlowCard";
+import { CalendarClock, ThumbsUp, ThumbsDown, Building2, School } from "lucide-react";
+import SpotlightCard from "../../components/fx/SpotlightCard";
+import StatusPill from "../../components/fx/StatusPill";
+import BackLink from "../../components/fx/BackLink";
+import Loader from "../../components/fx/Loader";
+import EmptyState from "../../components/fx/EmptyState";
+import Aurora from "../../components/fx/Aurora";
 import { getCampusDriveById, respondToDrive } from "../../api/campus.api";
-
-const STATUS = {
-  upcoming: { bg: "rgba(251,191,36,0.15)", color: "#fcd34d" },
-  ongoing: { bg: "rgba(217,70,239,0.15)", color: "#f0abfc" },
-  closed: { bg: "rgba(148,163,184,0.15)", color: "#cbd5e1" },
-};
 
 const CampusDriveDetails = () => {
   const { id } = useParams();
-  const navigate = useNavigate();
   const [drive, setDrive] = useState(null);
   const [myResponse, setMyResponse] = useState(null);
   const [loading, setLoading] = useState(true);
   const [responding, setResponding] = useState(false);
 
-  const fetchDrive = async () => {
-    setLoading(true);
-    try {
-      const { data } = await getCampusDriveById(id);
-      setDrive(data.drive);
-      setMyResponse(data.myResponse);
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to load drive");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    fetchDrive();
+    (async () => {
+      setLoading(true);
+      try {
+        const { data } = await getCampusDriveById(id);
+        setDrive(data.drive);
+        setMyResponse(data.myResponse);
+      } catch (err) {
+        toast.error(err.response?.data?.message || "Failed to load drive");
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, [id]);
 
   const handleRespond = async (response) => {
@@ -51,67 +47,150 @@ const CampusDriveDetails = () => {
     }
   };
 
-  if (loading) return <p style={{ color: "#a897c9" }}>Loading drive...</p>;
-  if (!drive) return <p style={{ color: "#a897c9" }}>Drive not found.</p>;
+  if (loading) return <Loader label="Loading drive" full />;
 
-  const status = STATUS[drive.status] || STATUS.ongoing;
+  if (!drive) {
+    return (
+      <div style={{ maxWidth: "740px" }}>
+        <BackLink />
+        <EmptyState icon={School} title="Drive not found" subtitle="This drive may have been closed or removed." />
+      </div>
+    );
+  }
+
   const isClosed = drive.status === "closed";
+  const awaiting = !isClosed && !myResponse;
+
+  const respondBtn = (kind, Icon, label, tone) => {
+    const chosen = myResponse === kind;
+    return (
+      <motion.button
+        whileTap={{ scale: 0.97 }}
+        disabled={isClosed || responding}
+        onClick={() => handleRespond(kind)}
+        style={{
+          flex: 1,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "8px",
+          border: chosen ? "1px solid transparent" : `1px solid rgba(${tone},0.32)`,
+          borderRadius: "var(--hs-r-full)",
+          padding: "14px",
+          fontSize: "13.5px",
+          fontWeight: 700,
+          color: chosen ? "#fff" : `rgb(${tone})`,
+          background: chosen ? `rgb(${tone})` : "transparent",
+          cursor: isClosed ? "not-allowed" : "pointer",
+          opacity: isClosed ? 0.5 : 1,
+          transition: "all 0.22s var(--hs-ease)",
+        }}
+      >
+        <Icon size={15} /> {label}
+      </motion.button>
+    );
+  };
 
   return (
-    <div style={{ maxWidth: "700px" }}>
-      <button onClick={() => navigate(-1)} style={{ display: "flex", alignItems: "center", gap: "6px", border: "none", background: "transparent", color: "#a897c9", fontSize: "13px", fontWeight: 600, cursor: "pointer", marginBottom: "18px", padding: 0 }}>
-        <ArrowLeft size={14} /> Back
-      </button>
+    <div style={{ maxWidth: "780px" }}>
+      <BackLink />
 
-      <GlowCard style={{ padding: "30px" }} hoverLift={false}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "14px", marginBottom: "16px" }}>
-          <div>
-            <h1 style={{ margin: 0, fontSize: "22px", fontWeight: 800, color: "#fff" }}>{drive.title}</h1>
-            <p style={{ margin: "6px 0 0", fontSize: "14px", color: "#c4b5fd", fontWeight: 600 }}>{drive.company}</p>
+      <SpotlightCard hover={false} live={awaiting} padding={0} style={{ overflow: "hidden" }}>
+        <div style={{ position: "relative", padding: "28px 30px 22px", overflow: "hidden" }}>
+          <Aurora particles={false} grain={false} blobOpacity={0.42} intensity={0.7} />
+
+          <div
+            style={{
+              position: "relative",
+              zIndex: 2,
+              display: "flex",
+              alignItems: "flex-start",
+              gap: "16px",
+              flexWrap: "wrap",
+            }}
+          >
+            <div
+              style={{
+                width: "52px",
+                height: "52px",
+                flexShrink: 0,
+                borderRadius: "var(--hs-r-lg)",
+                display: "grid",
+                placeItems: "center",
+                background: "rgba(var(--hs-a2-rgb),0.14)",
+                border: "1px solid rgba(var(--hs-a2-rgb),0.3)",
+              }}
+            >
+              <Building2 size={22} style={{ color: "var(--hs-a3)" }} />
+            </div>
+
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <h1
+                style={{
+                  margin: 0,
+                  fontSize: "clamp(20px, 2.8vw, 25px)",
+                  fontWeight: 900,
+                  color: "var(--hs-text)",
+                  letterSpacing: "-0.025em",
+                }}
+              >
+                {drive.title}
+              </h1>
+              <p style={{ margin: "6px 0 0", fontSize: "14px", color: "var(--hs-a2)", fontWeight: 700 }}>
+                {drive.company}
+              </p>
+            </div>
+
+            <StatusPill status={drive.status} size="md" />
           </div>
-          <span style={{ fontSize: "11px", fontWeight: 700, textTransform: "capitalize", color: status.color, background: status.bg, padding: "5px 12px", borderRadius: "999px", flexShrink: 0 }}>{drive.status}</span>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "20px", fontSize: "13px", color: "#a897c9" }}>
-          <CalendarClock size={14} /> Respond before {new Date(drive.deadline).toLocaleString()}
-        </div>
-
-        {drive.description && <p style={{ fontSize: "14px", lineHeight: 1.7, color: "#e9d5ff", marginBottom: "16px" }}>{drive.description}</p>}
-        {drive.jd && <p style={{ fontSize: "13px", color: "#a897c9", marginBottom: "26px" }}>{drive.jd}</p>}
-
-        <div style={{ display: "flex", gap: "10px", paddingTop: "20px", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-          <motion.button
-            whileTap={{ scale: 0.97 }}
-            disabled={isClosed || responding}
-            onClick={() => handleRespond("interested")}
+        <div style={{ padding: "0 30px 30px" }}>
+          <div
             style={{
-              flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
-              border: myResponse === "interested" ? "none" : "1px solid rgba(52,211,153,0.3)",
-              borderRadius: "12px", padding: "13px", fontSize: "13.5px", fontWeight: 700,
-              color: myResponse === "interested" ? "#fff" : "#6ee7b7",
-              background: myResponse === "interested" ? "linear-gradient(to right,#34d399,#10b981)" : "transparent",
-              cursor: isClosed ? "not-allowed" : "pointer", opacity: isClosed ? 0.5 : 1,
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              marginBottom: "22px",
+              padding: "12px 15px",
+              borderRadius: "var(--hs-r)",
+              fontSize: "13px",
+              fontWeight: 600,
+              color: awaiting ? "var(--hs-warn)" : "var(--hs-muted)",
+              background: awaiting ? "rgba(var(--hs-warn-rgb),0.08)" : "rgba(255,255,255,0.035)",
+              border: `1px solid ${awaiting ? "rgba(var(--hs-warn-rgb),0.24)" : "var(--hs-line)"}`,
             }}
           >
-            <ThumbsUp size={15} /> Interested
-          </motion.button>
-          <motion.button
-            whileTap={{ scale: 0.97 }}
-            disabled={isClosed || responding}
-            onClick={() => handleRespond("not_interested")}
-            style={{
-              flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
-              border: myResponse === "not_interested" ? "none" : "1px solid rgba(251,113,133,0.3)",
-              borderRadius: "12px", padding: "13px", fontSize: "13.5px", fontWeight: 700,
-              color: myResponse === "not_interested" ? "#fff" : "#fda4af",
-              background: myResponse === "not_interested" ? "linear-gradient(to right,#fb7185,#f43f5e)" : "transparent",
-              cursor: isClosed ? "not-allowed" : "pointer", opacity: isClosed ? 0.5 : 1,
-            }}
-          >
-            <ThumbsDown size={15} /> Not Interested
-          </motion.button>
+            <CalendarClock size={15} />
+            Respond before {drive.deadline ? new Date(drive.deadline).toLocaleString() : "—"}
+          </div>
+
+          {drive.description && (
+            <p style={{ fontSize: "14px", lineHeight: 1.78, color: "var(--hs-text)", marginBottom: "16px" }}>
+              {drive.description}
+            </p>
+          )}
+
+          {drive.jd && (
+            <p
+              style={{
+                fontSize: "13px",
+                lineHeight: 1.75,
+                color: "var(--hs-muted)",
+                marginBottom: "26px",
+                whiteSpace: "pre-wrap",
+              }}
+            >
+              {drive.jd}
+            </p>
+          )}
+
+          <div style={{ display: "flex", gap: "10px", paddingTop: "20px", borderTop: "1px solid var(--hs-line)" }}>
+            {respondBtn("interested", ThumbsUp, "Interested", "var(--hs-ok-rgb)")}
+            {respondBtn("not_interested", ThumbsDown, "Not interested", "var(--hs-bad-rgb)")}
+          </div>
         </div>
-      </GlowCard>
+      </SpotlightCard>
     </div>
   );
 };

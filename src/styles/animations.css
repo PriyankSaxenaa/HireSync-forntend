@@ -1,0 +1,475 @@
+/* ============================================================================
+   HireSync — Motion library
+   Every loop in here is GPU-cheap (transform / opacity / background-position)
+   so a page can run five of them at once without dropping frames.
+   ========================================================================= */
+
+/* ── Ambient drift: the aurora blobs that never stop moving ─────────────── */
+@keyframes hs-drift-a {
+  0%   { transform: translate3d(0, 0, 0) scale(1); }
+  33%  { transform: translate3d(6vw, -4vh, 0) scale(1.18); }
+  66%  { transform: translate3d(-4vw, 5vh, 0) scale(0.9); }
+  100% { transform: translate3d(0, 0, 0) scale(1); }
+}
+
+@keyframes hs-drift-b {
+  0%   { transform: translate3d(0, 0, 0) scale(1.05); }
+  40%  { transform: translate3d(-7vw, 6vh, 0) scale(0.88); }
+  75%  { transform: translate3d(5vw, 3vh, 0) scale(1.22); }
+  100% { transform: translate3d(0, 0, 0) scale(1.05); }
+}
+
+@keyframes hs-drift-c {
+  0%   { transform: translate3d(0, 0, 0) scale(0.95); }
+  50%  { transform: translate3d(4vw, 7vh, 0) scale(1.25); }
+  100% { transform: translate3d(0, 0, 0) scale(0.95); }
+}
+
+/* ── Infinite scrolling grid floor ─────────────────────────────────────── */
+@keyframes hs-grid-pan {
+  from { background-position: 0 0, 0 0; }
+  to   { background-position: 60px 60px, 60px 60px; }
+}
+
+/* ── Rotation ──────────────────────────────────────────────────────────── */
+@keyframes hs-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes hs-spin-rev {
+  to { transform: rotate(-360deg); }
+}
+
+/* Conic gradient sweep used for "live" card borders */
+@keyframes hs-conic {
+  to { --hs-angle: 360deg; }
+}
+
+/* ── Light sweep across a surface (buttons, skeletons, headers) ─────────── */
+@keyframes hs-sweep {
+  0%   { transform: translateX(-120%) skewX(-18deg); }
+  100% { transform: translateX(320%) skewX(-18deg); }
+}
+
+/* ── Endless marquee / ticker ──────────────────────────────────────────── */
+@keyframes hs-marquee {
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(-50%, 0, 0); }
+}
+
+@keyframes hs-marquee-rev {
+  from { transform: translate3d(-50%, 0, 0); }
+  to   { transform: translate3d(0, 0, 0); }
+}
+
+/* ── Gentle float / bob ────────────────────────────────────────────────── */
+@keyframes hs-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-9px); }
+}
+
+@keyframes hs-float-sm {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-4px); }
+}
+
+/* ── Radar ping / live pulse ───────────────────────────────────────────── */
+@keyframes hs-ping {
+  0%   { transform: scale(0.7); opacity: 0.85; }
+  70%  { transform: scale(2.4); opacity: 0; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+
+@keyframes hs-breathe {
+  0%, 100% { opacity: 0.55; filter: blur(18px); }
+  50%      { opacity: 1;    filter: blur(26px); }
+}
+
+/* ── Flowing gradient text / borders ───────────────────────────────────── */
+@keyframes hs-flow {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* ── Typewriter caret ──────────────────────────────────────────────────── */
+@keyframes hs-caret {
+  0%, 45%   { opacity: 1; }
+  50%, 95%  { opacity: 0; }
+  100%      { opacity: 1; }
+}
+
+/* ── Scanline crawling down a panel ────────────────────────────────────── */
+@keyframes hs-scan {
+  0%   { transform: translateY(-100%); opacity: 0; }
+  8%   { opacity: 1; }
+  92%  { opacity: 1; }
+  100% { transform: translateY(2000%); opacity: 0; }
+}
+
+/* ── Equalizer bars (used on "live" indicators) ────────────────────────── */
+@keyframes hs-eq {
+  0%, 100% { transform: scaleY(0.28); }
+  50%      { transform: scaleY(1); }
+}
+
+/* ── Orbiting satellite ────────────────────────────────────────────────── */
+@keyframes hs-orbit {
+  from { transform: rotate(0deg) translateX(var(--hs-orbit-r, 60px)) rotate(0deg); }
+  to   { transform: rotate(360deg) translateX(var(--hs-orbit-r, 60px)) rotate(-360deg); }
+}
+
+/* ── SVG stroke draw ───────────────────────────────────────────────────── */
+@keyframes hs-dash {
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes hs-dash-crawl {
+  to { stroke-dashoffset: -1000; }
+}
+
+/* ── Entrance ──────────────────────────────────────────────────────────── */
+@keyframes hs-rise {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes hs-pop {
+  0%   { opacity: 0; transform: scale(0.86); }
+  60%  { opacity: 1; transform: scale(1.03); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+/* ── Slow hue cycle for maximal-flex surfaces ──────────────────────────── */
+@keyframes hs-hue {
+  from { filter: hue-rotate(0deg); }
+  to   { filter: hue-rotate(360deg); }
+}
+
+/* ── Falling data streaks ──────────────────────────────────────────────── */
+@keyframes hs-rain {
+  0%   { transform: translateY(-120%); opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { transform: translateY(1200%); opacity: 0; }
+}
+
+/* ============================================================================
+   Utility classes
+   ========================================================================= */
+
+.hs-anim-float      { animation: hs-float 6s var(--hs-ease-in-out) infinite; }
+.hs-anim-float-sm   { animation: hs-float-sm 4s var(--hs-ease-in-out) infinite; }
+.hs-anim-spin-slow  { animation: hs-spin 18s linear infinite; }
+.hs-anim-breathe    { animation: hs-breathe 5s var(--hs-ease-in-out) infinite; }
+.hs-anim-hue        { animation: hs-hue 22s linear infinite; }
+
+/* Solid accent text — no flowing rainbow, just the dominant role hue.
+   Kept as one static color rather than a moving gradient: color should mark
+   a word, not perform. */
+.hs-gradient-text {
+  color: var(--hs-a3);
+}
+
+/* A static two-stop gradient for the one emphasis phrase in a hero headline —
+   violet into lavender, no animation. Used sparingly, once per page. */
+.hs-emphasis {
+  background: linear-gradient(100deg, var(--hs-a2), var(--hs-a3));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+/* Muted label text — plain, no shimmer sweep. Used for eyebrows/labels. */
+.hs-shimmer-text {
+  color: var(--hs-dim);
+}
+
+/* A softer, faintly-glassy card for hero/auth "preview" surfaces — a light
+   blur and an accent-tinted border, one step more polished than the flat
+   .hs-card used everywhere else. Used sparingly (hero mockups, auth panel). */
+.hs-glass {
+  position: relative;
+  border-radius: var(--hs-r-xl);
+  border: 1px solid rgba(var(--hs-a2-rgb), 0.28);
+  background: rgba(255, 255, 255, 0.045);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: var(--hs-shadow-lg);
+}
+
+/* Small rounded status pill — the badge sitting above a hero headline. */
+.hs-pill-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 16px 7px 12px;
+  border-radius: var(--hs-r-full);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  border: 1px solid rgba(var(--hs-a2-rgb), 0.35);
+  background: rgba(var(--hs-a2-rgb), 0.12);
+  color: var(--hs-text);
+}
+
+/* Base surface — solid near-black with a hairline edge, no frosted blur.
+   Soft glass, tied to the active role's accent — the same polish as the
+   landing/auth surfaces, cascaded through every dashboard via this one
+   class. Kept subtle: low blur, low opacity, so dense tables and long lists
+   stay legible rather than swimming behind frosted glass. */
+.hs-card {
+  position: relative;
+  border-radius: var(--hs-r-lg);
+  border: 1px solid rgba(var(--hs-a2-rgb), 0.16);
+  background: rgba(255, 255, 255, 0.035);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: var(--hs-shadow-sm);
+  transition: border-color var(--hs-mid) var(--hs-ease),
+              transform var(--hs-mid) var(--hs-ease),
+              box-shadow var(--hs-mid) var(--hs-ease);
+}
+
+.hs-card-hover:hover {
+  transform: translateY(-2px);
+  border-color: rgba(var(--hs-a2-rgb), 0.4);
+  box-shadow: var(--hs-shadow);
+}
+
+/* Hairline border that only lights up on `live` state — a thin single-hue
+   ring, not an orbiting rainbow conic sweep. */
+.hs-live-border {
+  position: relative;
+  isolation: isolate;
+}
+
+.hs-live-border::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: 1px solid rgba(var(--hs-a2-rgb), 0.5);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* A single restrained light pass across a surface — used once on load or on
+   hover, never looping forever. */
+.hs-sheen {
+  position: relative;
+  overflow: hidden;
+}
+
+.hs-sheen::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 40%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.08),
+    transparent
+  );
+  transform: translateX(-120%) skewX(-18deg);
+  transition: transform 0.7s var(--hs-ease);
+  pointer-events: none;
+}
+
+.hs-sheen:hover::after {
+  transform: translateX(320%) skewX(-18deg);
+}
+
+/* Scanline crawling down a panel */
+.hs-scanline {
+  position: relative;
+  overflow: hidden;
+}
+
+.hs-scanline::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(var(--hs-a3-rgb), 0.5),
+    transparent
+  );
+  animation: hs-scan 9s linear infinite;
+  pointer-events: none;
+}
+
+/* ============================================================================
+   Editorial system — numbered section labels, hairline rules, ghost type.
+   ========================================================================= */
+
+/* "01 — Platform" style section marker: index, hairline rule, a "+" tick. */
+.hs-index-rule {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: var(--hs-dim);
+}
+
+.hs-index-rule .hs-index-num {
+  font-family: var(--hs-mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--hs-muted);
+  flex-shrink: 0;
+}
+
+.hs-index-rule .hs-index-line {
+  flex: 1;
+  height: 1px;
+  background: var(--hs-line-strong);
+}
+
+.hs-index-rule .hs-index-tick {
+  flex-shrink: 0;
+  font-family: var(--hs-mono);
+  font-size: 13px;
+  color: var(--hs-dim);
+}
+
+/* Oversized, low-contrast background type — the "ghost headline" the
+   reference site uses to give scale without competing with the live copy. */
+.hs-ghost-text {
+  color: transparent;
+  -webkit-text-stroke: 1px rgba(255, 255, 255, 0.14);
+  font-weight: 800;
+  user-select: none;
+  pointer-events: none;
+}
+
+/* Tight, heavy editorial display type — the headline workhorse. */
+.hs-display {
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 0.96;
+  text-transform: uppercase;
+}
+
+/* Marquee track — duplicate the children inside for a seamless loop */
+.hs-marquee {
+  display: flex;
+  width: max-content;
+  animation: hs-marquee var(--hs-marquee-dur, 30s) linear infinite;
+}
+
+.hs-marquee-rev {
+  animation-name: hs-marquee-rev;
+}
+
+.hs-marquee-mask {
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+}
+
+.hs-marquee-pause:hover .hs-marquee {
+  animation-play-state: paused;
+}
+
+/* Shimmering skeleton placeholder */
+.hs-skeleton {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--hs-r-sm);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.hs-skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.09),
+    transparent
+  );
+  animation: hs-sweep 1.6s linear infinite;
+}
+
+/* Live equalizer — three bars bouncing out of phase */
+.hs-eq {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 11px;
+}
+
+.hs-eq > i {
+  display: block;
+  width: 2.5px;
+  height: 100%;
+  border-radius: 2px;
+  background: currentColor;
+  transform-origin: bottom;
+  animation: hs-eq 1s var(--hs-ease-in-out) infinite;
+}
+
+.hs-eq > i:nth-child(2) { animation-delay: 0.18s; }
+.hs-eq > i:nth-child(3) { animation-delay: 0.36s; }
+
+/* Pulsing "live" dot with an expanding ring */
+.hs-pulse-dot {
+  position: relative;
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.hs-pulse-dot::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: currentColor;
+  animation: hs-ping 2s var(--hs-ease-in-out) infinite;
+}
+
+/* Scroll-reveal target — flipped to .is-in by the Reveal component */
+.hs-reveal {
+  opacity: 0;
+  transform: translateY(22px);
+  transition: opacity 0.7s var(--hs-ease), transform 0.7s var(--hs-ease);
+}
+
+.hs-reveal.is-in {
+  opacity: 1;
+  transform: none;
+}
+
+/* ============================================================================
+   Respect the OS setting — kill the loops, keep the layout intact.
+   ========================================================================= */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .hs-reveal {
+    opacity: 1;
+    transform: none;
+  }
+}

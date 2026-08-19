@@ -1,6 +1,5 @@
 // src/pages/candidate/CandidateDashboard.jsx
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import toast from "react-hot-toast";
 import {
@@ -8,15 +7,20 @@ import {
   FileText,
   Bookmark,
   School,
-  ArrowRight,
   UploadCloud,
   CheckCircle2,
+  Search,
+  TrendingUp,
 } from "lucide-react";
-import ColorBends from "../../components/common/ColorBends";
-import StatOrb from "../../components/candidate/StatOrb";
+import StatCard from "../../components/fx/StatCard";
+import SectionTitle from "../../components/fx/SectionTitle";
+import EmptyState from "../../components/fx/EmptyState";
+import PageHeader from "../../components/fx/PageHeader";
+import MagneticButton from "../../components/fx/MagneticButton";
+import Marquee from "../../components/fx/Marquee";
+import Loader from "../../components/fx/Loader";
 import JobCard from "../../components/candidate/JobCard";
 import DriveCard from "../../components/candidate/DriveCard";
-import EmptyState from "../../components/candidate/EmptyState";
 import { useAuth } from "../../hooks/useAuth";
 import { getMyProfile } from "../../api/candidate.api";
 import { getMyApplications, getSavedJobs, applyToJob, saveJob } from "../../api/applications.api";
@@ -110,75 +114,156 @@ const CandidateDashboard = () => {
     }
   };
 
-  const profileComplete = !!(profile?.resumeUrl && profile?.skills?.length);
+  if (loading) return <Loader label="Building your dashboard" full />;
 
-  if (loading) return <p style={{ color: "#a897c9" }}>Loading your dashboard...</p>;
+  const profileComplete = Boolean(profile?.resumeUrl && profile?.skills?.length);
+  const profileScore = profileComplete ? 100 : profile?.skills?.length ? 60 : 20;
+  const firstName = user?.name?.split(" ")[0] || "there";
+  const accepted = applications.filter((a) => a.status === "accepted").length;
 
   return (
     <div>
-      {/* Hero */}
-      <div style={{ position: "relative", borderRadius: "28px", overflow: "hidden", height: "210px", marginBottom: "26px", border: "1px solid rgba(216,180,254,0.12)" }}>
-        <div style={{ position: "absolute", inset: 0 }}>
-          <ColorBends colors={["#8b5cf6", "#d946ef", "#f472b6"]} rotation={30} speed={0.14} scale={1.1} frequency={1} warpStrength={1} mouseInfluence={1.3} noise={0.07} parallax={0.7} iterations={1} intensity={1} bandWidth={6} transparent />
-        </div>
-        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(120deg, rgba(7,4,15,0.9), rgba(7,4,15,0.35))" }} />
-        <div style={{ position: "relative", height: "100%", display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 34px" }}>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "12px", fontWeight: 700, color: "#f0abfc", marginBottom: "8px" }}>
-            <Sparkles size={14} /> CANDIDATE HOME
-          </span>
-          <h1 style={{ margin: 0, fontSize: "clamp(22px,3vw,32px)", fontWeight: 800, color: "#fff" }}>
-            Hey {user?.name?.split(" ")[0]} 👋
-          </h1>
-          <p style={{ margin: "6px 0 0", fontSize: "14px", color: "#e9d5ff", maxWidth: "480px" }}>
-            Your next opportunity is one application away. Let's find it.
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        eyebrow="Candidate home"
+        icon={Sparkles}
+        title={`Hey ${firstName} 👋`}
+        liveLabel="SYNCED"
+        subtitle="Your next opportunity is one application away. Everything below updates in realtime."
+        actions={
+          <MagneticButton to="/candidate/jobs">
+            <Search size={15} /> Find roles
+          </MagneticButton>
+        }
+      />
 
+      {/* Nudge to finish the profile — the thing that unlocks matching */}
       {!profileComplete && (
         <motion.div
-          initial={{ opacity: 0, y: 8 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "14px", flexWrap: "wrap", padding: "16px 20px", borderRadius: "18px", background: "rgba(251,191,36,0.08)", border: "1px solid rgba(251,191,36,0.2)", marginBottom: "24px" }}
+          className="hs-card hs-sheen"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "16px",
+            flexWrap: "wrap",
+            padding: "16px 20px",
+            marginBottom: "22px",
+            background: "rgba(var(--hs-warn-rgb),0.07)",
+            borderColor: "rgba(var(--hs-warn-rgb),0.24)",
+          }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            <UploadCloud size={20} color="#fcd34d" />
+          <div style={{ display: "flex", alignItems: "center", gap: "13px", position: "relative" }}>
+            <div
+              style={{
+                width: "38px",
+                height: "38px",
+                flexShrink: 0,
+                borderRadius: "var(--hs-r)",
+                display: "grid",
+                placeItems: "center",
+                background: "rgba(var(--hs-warn-rgb),0.16)",
+                border: "1px solid rgba(var(--hs-warn-rgb),0.32)",
+              }}
+            >
+              <UploadCloud size={17} style={{ color: "var(--hs-warn)" }} />
+            </div>
             <div>
-              <p style={{ margin: 0, fontSize: "13.5px", fontWeight: 700, color: "#fcd34d" }}>Complete your profile</p>
-              <p style={{ margin: 0, fontSize: "12.5px", color: "#a897c9" }}>Upload your resume so we can recommend jobs that fit your skills.</p>
+              <p style={{ margin: 0, fontSize: "13.5px", fontWeight: 800, color: "var(--hs-warn)" }}>
+                Complete your profile
+              </p>
+              <p style={{ margin: "2px 0 0", fontSize: "12.5px", color: "var(--hs-muted)" }}>
+                Upload a resume so we can match you to roles that fit your skills.
+              </p>
             </div>
           </div>
-          <Link to="/candidate/profile" style={{ fontSize: "12.5px", fontWeight: 700, color: "#fff", background: "linear-gradient(to right,#f59e0b,#f43f5e)", padding: "9px 18px", borderRadius: "999px", textDecoration: "none", whiteSpace: "nowrap" }}>
+
+          <MagneticButton to="/candidate/profile" style={{ position: "relative", fontSize: "12.5px" }}>
             Complete now
-          </Link>
+          </MagneticButton>
         </motion.div>
       )}
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px", marginBottom: "28px" }}>
-        <StatOrb icon={FileText} label="Applications" value={applications.length} gradient="linear-gradient(135deg,#8b5cf6,#a78bfa)" delay={0} />
-        <StatOrb icon={Bookmark} label="Saved Jobs" value={savedCount} gradient="linear-gradient(135deg,#d946ef,#f472b6)" delay={0.05} />
-        <StatOrb icon={School} label="Campus Drives" value={drives.length} gradient="linear-gradient(135deg,#06b6d4,#22d3ee)" delay={0.1} />
-        <StatOrb icon={CheckCircle2} label="Profile" value={profileComplete ? 100 : profile?.skills?.length ? 60 : 20} suffix="%" gradient="linear-gradient(135deg,#34d399,#10b981)" delay={0.15} />
+      {/* ── KPI row ───────────────────────────────────────────────────────── */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
+          gap: "16px",
+          marginBottom: "26px",
+        }}
+      >
+        <StatCard
+          icon={FileText}
+          label="Applications"
+          value={applications.length}
+          hint={accepted > 0 ? `${accepted} accepted` : "Track them live"}
+          tone="var(--hs-a1-rgb)"
+          delay={0}
+          live={accepted > 0}
+        />
+        <StatCard icon={Bookmark} label="Saved jobs" value={savedCount} tone="var(--hs-a2-rgb)" delay={0.06} />
+        <StatCard icon={School} label="Campus drives" value={drives.length} tone="var(--hs-a3-rgb)" delay={0.12} />
+        <StatCard
+          icon={CheckCircle2}
+          label="Profile strength"
+          value={profileScore}
+          suffix="%"
+          progress={profileScore}
+          tone="var(--hs-ok-rgb)"
+          delay={0.18}
+        />
       </div>
 
-      {/* Recommended */}
-      <div style={{ marginBottom: "30px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-          <h2 style={{ margin: 0, fontSize: "17px", fontWeight: 800, color: "#fff" }}>Recommended for You</h2>
-          <Link to="/candidate/jobs" style={{ fontSize: "12.5px", fontWeight: 700, color: "#f0abfc", textDecoration: "none", display: "flex", alignItems: "center", gap: "4px" }}>
-            Browse all <ArrowRight size={13} />
-          </Link>
+      {/* ── Skill ticker — a permanent readout of what you match on ───────── */}
+      {profile?.skills?.length > 0 && (
+        <div
+          className="hs-card"
+          style={{ padding: "13px 0", marginBottom: "26px", display: "flex", alignItems: "center", gap: "16px" }}
+        >
+          <span
+            className="hs-eyebrow"
+            style={{ paddingLeft: "20px", fontSize: "10px", color: "var(--hs-a2)", flexShrink: 0 }}
+          >
+            <TrendingUp size={12} /> Matching on
+          </span>
+          <Marquee duration={30} gap={26} style={{ flex: 1, minWidth: 0 }}>
+            {profile.skills.map((s) => (
+              <span
+                key={s}
+                style={{
+                  fontSize: "12.5px",
+                  fontWeight: 700,
+                  color: "var(--hs-muted)",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.08em",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {s}
+              </span>
+            ))}
+          </Marquee>
         </div>
+      )}
+
+      {/* ── Recommended ───────────────────────────────────────────────────── */}
+      <div style={{ marginBottom: "32px" }}>
+        <SectionTitle
+          title="Recommended for you"
+          subtitle="Ranked on real overlap with your skills"
+          icon={Sparkles}
+          to="/candidate/jobs"
+          actionLabel="Browse all"
+        />
+
         {recommended.length === 0 ? (
           <EmptyState
             icon={Sparkles}
             title="No recommendations yet"
-            subtitle="Add skills or upload a resume to unlock personalized job matches based on what you already know."
-            action={
-              <Link to="/candidate/profile" style={{ fontSize: "13px", fontWeight: 700, color: "#fff", background: "linear-gradient(to right,#8b5cf6,#d946ef)", padding: "10px 20px", borderRadius: "999px", textDecoration: "none" }}>
-                Update Profile
-              </Link>
-            }
+            subtitle="Add skills or upload a resume to unlock personalised matches based on what you already know."
+            action={<MagneticButton to="/candidate/profile">Update profile</MagneticButton>}
           />
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "16px" }}>
@@ -193,27 +278,32 @@ const CandidateDashboard = () => {
                 applying={actioningId === r.job._id}
                 onApply={() => handleApply(r.job._id)}
                 onSave={() => handleSave(r.job._id)}
-                onView={() => {}}
               />
             ))}
           </div>
         )}
       </div>
 
-      {/* Campus drives */}
+      {/* ── Campus drives ─────────────────────────────────────────────────── */}
       <div>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-          <h2 style={{ margin: 0, fontSize: "17px", fontWeight: 800, color: "#fff" }}>Campus Drives</h2>
-          <Link to="/candidate/campus" style={{ fontSize: "12.5px", fontWeight: 700, color: "#f0abfc", textDecoration: "none", display: "flex", alignItems: "center", gap: "4px" }}>
-            View all <ArrowRight size={13} />
-          </Link>
-        </div>
+        <SectionTitle
+          title="Campus drives"
+          subtitle="Posted by your placement cell"
+          icon={School}
+          to="/candidate/campus"
+        />
+
         {drives.length === 0 ? (
-          <EmptyState icon={School} title="No campus drives yet" subtitle="Drives posted by your college's placement cell will show up here." />
+          <EmptyState
+            icon={School}
+            title="No campus drives yet"
+            subtitle="Drives posted by your college's placement cell will show up here."
+            compact
+          />
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "16px" }}>
             {drives.slice(0, 3).map((d) => (
-              <DriveCard key={d.id} drive={d} onView={() => {}} onRespond={(r) => handleRespond(d.id, r)} />
+              <DriveCard key={d.id} drive={d} onRespond={(r) => handleRespond(d.id, r)} />
             ))}
           </div>
         )}

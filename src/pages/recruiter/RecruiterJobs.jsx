@@ -1,9 +1,22 @@
+// src/pages/recruiter/RecruiterJobs.jsx
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { Plus, MapPin, Calendar, Wallet, Users, Pencil, Trash2 } from "lucide-react";
+import { Plus, MapPin, Calendar, Wallet, Users, Pencil, Trash2, Briefcase } from "lucide-react";
 import { getMyJobs, createJob, updateJob, deleteJob } from "../../api/jobs.api";
 import JobFormModal from "../../components/recruiter/JobFormModal";
+import SpotlightCard from "../../components/fx/SpotlightCard";
+import PageHeader from "../../components/fx/PageHeader";
+import EmptyState from "../../components/fx/EmptyState";
+import MagneticButton from "../../components/fx/MagneticButton";
+import { SkeletonGrid } from "../../components/fx/Skeleton";
+
+const Meta = ({ icon: Icon, children }) => (
+  <span style={{ display: "flex", alignItems: "center", gap: "7px", fontSize: "12.5px", color: "var(--hs-muted)" }}>
+    <Icon size={13} style={{ color: "var(--hs-dim)", flexShrink: 0 }} />
+    {children}
+  </span>
+);
 
 const RecruiterJobs = () => {
   const [jobs, setJobs] = useState([]);
@@ -69,206 +82,154 @@ const RecruiterJobs = () => {
     }
   };
 
-  if (loading) return <p style={{ color: "#94a3b8" }}>Loading your jobs...</p>;
+  const iconBtn = (tone) => ({
+    width: "36px",
+    height: "36px",
+    flexShrink: 0,
+    display: "grid",
+    placeItems: "center",
+    border: `1px solid ${tone ? `rgba(${tone},0.3)` : "var(--hs-line)"}`,
+    borderRadius: "var(--hs-r-full)",
+    background: "transparent",
+    color: tone ? `rgb(${tone})` : "var(--hs-muted)",
+    transition: "all 0.2s var(--hs-ease)",
+  });
 
   return (
     <div>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          flexWrap: "wrap",
-          gap: "12px",
-          marginBottom: "24px",
-        }}
-      >
-        <div>
-          <h1 style={{ margin: 0, fontSize: "26px", fontWeight: 800, color: "#fff" }}>My Jobs</h1>
-          <p style={{ margin: "6px 0 0", fontSize: "14px", color: "#94a3b8" }}>
-            Manage the jobs you've posted and review applicants.
-          </p>
-        </div>
-        <button
-          onClick={openCreate}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            border: "none",
-            borderRadius: "999px",
-            padding: "12px 22px",
-            fontSize: "14px",
-            fontWeight: 700,
-            color: "#fff",
-            background: "linear-gradient(to right,#f59e0b,#f43f5e)",
-            cursor: "pointer",
-            boxShadow: "0 0 24px rgba(244,63,94,0.3)",
-          }}
-        >
-          <Plus size={16} /> Post a Job
-        </button>
-      </div>
+      <PageHeader
+        eyebrow="Postings"
+        icon={Briefcase}
+        title="My jobs"
+        liveLabel={`${jobs.length} ACTIVE`}
+        subtitle="Manage the roles you've published and review who applied."
+        actions={
+          <MagneticButton onClick={openCreate}>
+            <Plus size={16} /> Post a job
+          </MagneticButton>
+        }
+      />
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "18px" }}>
-        {jobs.map((job) => (
-          <div
-            key={job._id}
-            style={{
-              background: "#131a26",
-              border: "1px solid rgba(255,255,255,0.06)",
-              borderRadius: "20px",
-              padding: "22px",
-              display: "flex",
-              flexDirection: "column",
-              gap: "14px",
-            }}
-          >
-            <div>
-              <h3 style={{ margin: 0, fontSize: "17px", fontWeight: 700, color: "#fff" }}>{job.title}</h3>
-              <p style={{ margin: "4px 0 0", fontSize: "13px", color: "#fb923c", fontWeight: 600 }}>{job.company}</p>
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: "6px", fontSize: "13px", color: "#94a3b8" }}>
-              <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                <MapPin size={13} /> {job.location}
-              </span>
-              <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                <Wallet size={13} /> {job.salaryRange || "Not Disclosed"}
-              </span>
-              <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                <Calendar size={13} />
-                Deadline: {job.applicationDeadline ? new Date(job.applicationDeadline).toLocaleDateString() : "—"}
-              </span>
-            </div>
-
-            {job.skillsRequired?.length > 0 && (
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
-                {job.skillsRequired.slice(0, 5).map((s) => (
-                  <span
-                    key={s}
-                    style={{
-                      fontSize: "11px",
-                      fontWeight: 600,
-                      color: "#fdba74",
-                      background: "rgba(245,158,11,0.12)",
-                      padding: "4px 10px",
-                      borderRadius: "999px",
-                    }}
-                  >
-                    {s}
-                  </span>
-                ))}
-                {job.skillsRequired.length > 5 && (
-                  <span style={{ fontSize: "11px", color: "#64748b" }}>+{job.skillsRequired.length - 5} more</span>
-                )}
+      {loading ? (
+        <SkeletonGrid count={3} min={320} />
+      ) : jobs.length === 0 ? (
+        <EmptyState
+          icon={Briefcase}
+          title="You haven't posted any jobs yet"
+          subtitle="Publish your first role and candidates will start showing up here."
+          action={
+            <MagneticButton onClick={openCreate}>
+              <Plus size={15} /> Post your first job
+            </MagneticButton>
+          }
+        />
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "18px" }}>
+          {jobs.map((job) => (
+            <SpotlightCard
+              key={job._id}
+              padding={22}
+              style={{ display: "flex", flexDirection: "column", gap: "14px", height: "100%" }}
+            >
+              <div>
+                <h3 style={{ margin: 0, fontSize: "17px", fontWeight: 800, color: "var(--hs-text)", lineHeight: 1.3 }}>
+                  {job.title}
+                </h3>
+                <p style={{ margin: "5px 0 0", fontSize: "13px", color: "var(--hs-a1)", fontWeight: 700 }}>
+                  {job.company}
+                </p>
               </div>
-            )}
 
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                marginTop: "6px",
-                paddingTop: "14px",
-                borderTop: "1px solid rgba(255,255,255,0.06)",
-              }}
-            >
-              <button
-                onClick={() => navigate(`/recruiter/jobs/${job._id}/applicants`)}
-                style={{
-                  flex: 1,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "6px",
-                  border: "none",
-                  borderRadius: "10px",
-                  padding: "9px",
-                  fontSize: "12px",
-                  fontWeight: 700,
-                  color: "#fff",
-                  background: "linear-gradient(to right,#f59e0b,#f43f5e)",
-                  cursor: "pointer",
-                }}
-              >
-                <Users size={13} /> Applicants
-              </button>
-              <button
-                onClick={() => openEdit(job)}
-                title="Edit job"
-                style={{
-                  width: "36px",
-                  height: "36px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  borderRadius: "10px",
-                  background: "transparent",
-                  color: "#e2e8f0",
-                  cursor: "pointer",
-                  flexShrink: 0,
-                }}
-              >
-                <Pencil size={14} />
-              </button>
-              <button
-                onClick={() => handleDelete(job._id, job.title)}
-                disabled={savingId === job._id}
-                title="Delete job"
-                style={{
-                  width: "36px",
-                  height: "36px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  border: "1px solid rgba(244,63,94,0.3)",
-                  borderRadius: "10px",
-                  background: "transparent",
-                  color: "#fda4af",
-                  cursor: savingId === job._id ? "not-allowed" : "pointer",
-                  opacity: savingId === job._id ? 0.5 : 1,
-                  flexShrink: 0,
-                }}
-              >
-                <Trash2 size={14} />
-              </button>
-            </div>
-          </div>
-        ))}
+              <div style={{ display: "flex", flexDirection: "column", gap: "7px" }}>
+                <Meta icon={MapPin}>{job.location || "—"}</Meta>
+                <Meta icon={Wallet}>{job.salaryRange || "Not disclosed"}</Meta>
+                <Meta icon={Calendar}>
+                  Deadline: {job.applicationDeadline ? new Date(job.applicationDeadline).toLocaleDateString() : "—"}
+                </Meta>
+              </div>
 
-        {jobs.length === 0 && (
-          <div
-            style={{
-              gridColumn: "1 / -1",
-              textAlign: "center",
-              padding: "60px 20px",
-              color: "#475569",
-              border: "1px dashed rgba(255,255,255,0.1)",
-              borderRadius: "20px",
-            }}
-          >
-            <p style={{ margin: "0 0 16px" }}>You haven't posted any jobs yet.</p>
-            <button
-              onClick={openCreate}
-              style={{
-                border: "none",
-                borderRadius: "999px",
-                padding: "10px 20px",
-                fontSize: "13px",
-                fontWeight: 700,
-                color: "#fff",
-                background: "linear-gradient(to right,#f59e0b,#f43f5e)",
-                cursor: "pointer",
-              }}
-            >
-              Post your first job
-            </button>
-          </div>
-        )}
-      </div>
+              {job.skillsRequired?.length > 0 && (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                  {job.skillsRequired.slice(0, 5).map((s) => (
+                    <span key={s} className="hs-chip" style={{ fontSize: "10.5px", padding: "3px 10px" }}>
+                      {s}
+                    </span>
+                  ))}
+                  {job.skillsRequired.length > 5 && (
+                    <span style={{ fontSize: "11px", color: "var(--hs-dim)", alignSelf: "center" }}>
+                      +{job.skillsRequired.length - 5} more
+                    </span>
+                  )}
+                </div>
+              )}
+
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  marginTop: "auto",
+                  paddingTop: "14px",
+                  borderTop: "1px solid var(--hs-line)",
+                }}
+              >
+                <button
+                  onClick={() => navigate(`/recruiter/jobs/${job._id}/applicants`)}
+                  style={{
+                    flex: 1,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "7px",
+                    border: "none",
+                    borderRadius: "var(--hs-r-full)",
+                    padding: "10px",
+                    fontSize: "12.5px",
+                    fontWeight: 700,
+                    color: "#fff",
+                    background: "var(--hs-a2)",
+                  }}
+                >
+                  <Users size={14} /> Applicants
+                </button>
+
+                <button
+                  onClick={() => openEdit(job)}
+                  title="Edit job"
+                  aria-label="Edit job"
+                  style={iconBtn()}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = "rgba(var(--hs-a2-rgb),0.45)";
+                    e.currentTarget.style.color = "var(--hs-a2)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = "var(--hs-line)";
+                    e.currentTarget.style.color = "var(--hs-muted)";
+                  }}
+                >
+                  <Pencil size={14} />
+                </button>
+
+                <button
+                  onClick={() => handleDelete(job._id, job.title)}
+                  disabled={savingId === job._id}
+                  title="Delete job"
+                  aria-label="Delete job"
+                  style={{
+                    ...iconBtn("var(--hs-bad-rgb)"),
+                    cursor: savingId === job._id ? "not-allowed" : "pointer",
+                    opacity: savingId === job._id ? 0.5 : 1,
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(var(--hs-bad-rgb),0.14)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            </SpotlightCard>
+          ))}
+        </div>
+      )}
 
       {modalOpen && <JobFormModal job={editingJob} onClose={() => setModalOpen(false)} onSubmit={handleSubmit} />}
     </div>

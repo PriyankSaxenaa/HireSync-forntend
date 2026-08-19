@@ -1,8 +1,7 @@
 // src/pages/tpo/TPOPlacementGroups.jsx
 import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
-import { Plus, X, Users2, Trash2, UserPlus, UserMinus } from "lucide-react";
+import { Plus, Users2, Trash2, UserPlus, UserMinus } from "lucide-react";
 import {
   getPlacementGroups,
   createPlacementGroup,
@@ -13,18 +12,15 @@ import {
 } from "../../api/placementGroups.api";
 import { getStudents } from "../../api/tpo.api";
 import CollegeGateNotice from "../../components/tpo/CollegeGateNotice";
-
-const inputStyle = {
-  width: "100%",
-  boxSizing: "border-box",
-  borderRadius: "10px",
-  padding: "11px 14px",
-  fontSize: "14px",
-  background: "#0e0819",
-  color: "#fff",
-  border: "1px solid rgba(216,180,254,0.15)",
-  outline: "none",
-};
+import SpotlightCard from "../../components/fx/SpotlightCard";
+import PageHeader from "../../components/fx/PageHeader";
+import EmptyState from "../../components/fx/EmptyState";
+import MagneticButton from "../../components/fx/MagneticButton";
+import Modal from "../../components/fx/Modal";
+import Drawer from "../../components/fx/Drawer";
+import Counter from "../../components/fx/Counter";
+import { SkeletonGrid } from "../../components/fx/Skeleton";
+import { FormField, Input, TextArea, Select } from "../../components/forms/FormField";
 
 const TPOPlacementGroups = () => {
   const [groups, setGroups] = useState([]);
@@ -54,7 +50,7 @@ const TPOPlacementGroups = () => {
       const { data } = await getStudents();
       setStudents(data.students || []);
     } catch {
-      // page still usable without the assign dropdown
+      // page is still usable without the assign dropdown
     }
   };
 
@@ -134,173 +130,254 @@ const TPOPlacementGroups = () => {
     (s) => !activeGroup?.group?.students?.some((m) => m._id === s._id)
   );
 
-  if (gateStatus) {
-    return <CollegeGateNotice status={gateStatus} />;
-  }
+  if (gateStatus) return <CollegeGateNotice status={gateStatus} />;
+
+  const members = activeGroup?.group?.students || [];
+  const totalGrouped = groups.reduce((sum, g) => sum + (g.studentCount || 0), 0);
 
   return (
     <div>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "14px", marginBottom: "24px" }}>
-        <div>
-          <h1 style={{ margin: 0, fontSize: "24px", fontWeight: 800, color: "#fff" }}>Placement Groups</h1>
-          <p style={{ margin: "6px 0 0", fontSize: "13px", color: "#a897c9" }}>Manually organize students for targeted drives.</p>
-        </div>
-        <button
-          onClick={() => setCreateOpen(true)}
-          style={{ display: "flex", alignItems: "center", gap: "8px", border: "none", borderRadius: "999px", padding: "12px 22px", fontSize: "14px", fontWeight: 700, color: "#fff", background: "linear-gradient(to right,#8b5cf6,#d946ef)", cursor: "pointer", boxShadow: "0 0 24px rgba(217,70,239,0.3)" }}
-        >
-          <Plus size={16} /> New Group
-        </button>
-      </div>
+      <PageHeader
+        eyebrow="Segmentation"
+        icon={Users2}
+        title="Placement groups"
+        liveLabel={`${groups.length} GROUPS`}
+        subtitle={
+          <>
+            Organise students into groups so drives reach exactly the right cohort.{" "}
+            <b style={{ color: "var(--hs-text)" }}>
+              <Counter value={totalGrouped} />
+            </b>{" "}
+            student{totalGrouped === 1 ? "" : "s"} assigned so far.
+          </>
+        }
+        actions={
+          <MagneticButton onClick={() => setCreateOpen(true)}>
+            <Plus size={16} /> New group
+          </MagneticButton>
+        }
+      />
 
       {loading ? (
-        <p style={{ color: "#a897c9" }}>Loading groups...</p>
+        <SkeletonGrid count={3} min={260} />
+      ) : groups.length === 0 ? (
+        <EmptyState
+          icon={Users2}
+          title="No placement groups yet"
+          subtitle="Create one to start organising students into targetable cohorts."
+          action={
+            <MagneticButton onClick={() => setCreateOpen(true)}>
+              <Plus size={15} /> Create your first group
+            </MagneticButton>
+          }
+        />
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "16px" }}>
-          {groups.map((g, i) => (
-            <motion.div
+          {groups.map((g) => (
+            <SpotlightCard
               key={g.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.04 }}
+              padding={20}
+              live={g.studentCount > 0}
               onClick={() => openGroup(g.id)}
-              style={{ cursor: "pointer", background: "#170f28", border: "1px solid rgba(216,180,254,0.1)", borderRadius: "18px", padding: "20px" }}
+              style={{ height: "100%" }}
             >
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
-                <div style={{ width: "38px", height: "38px", borderRadius: "12px", background: "linear-gradient(135deg,#8b5cf6,#d946ef)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <Users2 size={16} color="#fff" />
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
+                <div
+                  style={{
+                    width: "40px",
+                    height: "40px",
+                    borderRadius: "var(--hs-r)",
+                    display: "grid",
+                    placeItems: "center",
+                    background: "rgba(var(--hs-a2-rgb),0.14)",
+                    border: "1px solid rgba(var(--hs-a2-rgb),0.3)",
+                  }}
+                >
+                  <Users2 size={17} style={{ color: "var(--hs-a3)" }} />
                 </div>
+
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     handleDelete(g.id, g.name);
                   }}
-                  style={{ border: "none", background: "transparent", color: "#fda4af", cursor: "pointer" }}
+                  aria-label={`Delete ${g.name}`}
+                  style={{
+                    display: "grid",
+                    placeItems: "center",
+                    width: "32px",
+                    height: "32px",
+                    border: "1px solid rgba(var(--hs-bad-rgb),0.24)",
+                    borderRadius: "var(--hs-r-full)",
+                    background: "transparent",
+                    color: "var(--hs-bad)",
+                    transition: "background 0.2s var(--hs-ease)",
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(var(--hs-bad-rgb),0.14)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                 >
                   <Trash2 size={14} />
                 </button>
               </div>
-              <h3 style={{ margin: 0, fontSize: "15px", fontWeight: 700, color: "#fff" }}>{g.name}</h3>
-              {g.description && <p style={{ margin: "4px 0 0", fontSize: "12px", color: "#a897c9" }}>{g.description}</p>}
-              <p style={{ margin: "14px 0 0", fontSize: "12px", fontWeight: 700, color: "#f0abfc" }}>{g.studentCount} students</p>
-            </motion.div>
+
+              <h3 style={{ margin: 0, fontSize: "15.5px", fontWeight: 800, color: "var(--hs-text)" }}>{g.name}</h3>
+              {g.description && (
+                <p style={{ margin: "5px 0 0", fontSize: "12px", lineHeight: 1.55, color: "var(--hs-muted)" }}>
+                  {g.description}
+                </p>
+              )}
+
+              <p
+                style={{
+                  margin: "16px 0 0",
+                  fontSize: "12.5px",
+                  fontWeight: 800,
+                  color: "var(--hs-a2)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "7px",
+                }}
+              >
+                <span className="hs-pulse-dot" style={{ width: 6, height: 6 }} />
+                <Counter value={g.studentCount || 0} /> student{g.studentCount === 1 ? "" : "s"}
+              </p>
+            </SpotlightCard>
           ))}
-          {groups.length === 0 && (
-            <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: "60px 20px", color: "#544468", border: "1px dashed rgba(216,180,254,0.15)", borderRadius: "20px" }}>
-              No placement groups yet. Create one to start organizing students.
-            </div>
-          )}
         </div>
       )}
 
-      {/* Create modal */}
-      <AnimatePresence>
-        {createOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setCreateOpen(false)}
-            style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", zIndex: 100 }}
+      {/* ── Create group ──────────────────────────────────────────────────── */}
+      <Modal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        title="New placement group"
+        subtitle="Give the cohort a name your team will recognise."
+        icon={Users2}
+        width={440}
+      >
+        <form onSubmit={handleCreate}>
+          <FormField label="Group name" icon={Users2}>
+            <Input
+              placeholder="e.g. Core Branch 2026"
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              required
+            />
+          </FormField>
+
+          <FormField label="Description" marginBottom={24} hint="Optional — what this cohort is for.">
+            <TextArea
+              placeholder="Students eligible for core engineering roles…"
+              rows={3}
+              value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+            />
+          </FormField>
+
+          <MagneticButton
+            type="submit"
+            disabled={submitting}
+            strength={0.1}
+            style={{ width: "100%", padding: "13px", fontSize: "14px" }}
           >
-            <motion.form
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              onClick={(e) => e.stopPropagation()}
-              onSubmit={handleCreate}
-              style={{ width: "100%", maxWidth: "420px", background: "#1a1030", border: "1px solid rgba(216,180,254,0.15)", borderRadius: "20px", padding: "26px", boxSizing: "border-box" }}
+            {submitting ? "Creating…" : "Create group"}
+          </MagneticButton>
+        </form>
+      </Modal>
+
+      {/* ── Group detail ──────────────────────────────────────────────────── */}
+      <Drawer
+        open={Boolean(activeGroup)}
+        onClose={() => setActiveGroup(null)}
+        title={activeGroup?.group?.name}
+        subtitle={`${activeGroup?.group?.studentCount || 0} member${activeGroup?.group?.studentCount === 1 ? "" : "s"}`}
+        icon={Users2}
+      >
+        <div style={{ display: "flex", gap: "8px", marginBottom: "20px" }}>
+          <Select value={assignId} onChange={(e) => setAssignId(e.target.value)} style={{ flex: 1 }}>
+            <option value="">Select a student to add…</option>
+            {availableStudents.map((s) => (
+              <option key={s._id} value={s._id}>
+                {s.name} ({s.rollNo || "no roll"})
+              </option>
+            ))}
+          </Select>
+
+          <button
+            onClick={handleAssign}
+            disabled={!assignId}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              border: "none",
+              borderRadius: "var(--hs-r-full)",
+              padding: "0 16px",
+              fontSize: "12.5px",
+              fontWeight: 700,
+              color: "#fff",
+              background: "var(--hs-a2)",
+              cursor: assignId ? "pointer" : "not-allowed",
+              opacity: assignId ? 1 : 0.45,
+              flexShrink: 0,
+            }}
+          >
+            <UserPlus size={14} /> Add
+          </button>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+          {members.map((s) => (
+            <div
+              key={s._id}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "12px",
+                padding: "11px 14px",
+                borderRadius: "var(--hs-r-sm)",
+                background: "rgba(255,255,255,0.035)",
+                border: "1px solid var(--hs-line)",
+              }}
             >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "18px" }}>
-                <h3 style={{ margin: 0, fontSize: "17px", fontWeight: 800, color: "#fff" }}>New Placement Group</h3>
-                <button type="button" onClick={() => setCreateOpen(false)} style={{ border: "none", background: "transparent", color: "#a897c9", cursor: "pointer" }}>
-                  <X size={18} />
-                </button>
+              <div style={{ minWidth: 0 }}>
+                <p style={{ margin: 0, fontSize: "13px", fontWeight: 700, color: "var(--hs-text)" }}>{s.name}</p>
+                <p style={{ margin: 0, fontSize: "11px", color: "var(--hs-dim)" }}>
+                  {s.rollNo || "—"} · {s.branch || "—"}
+                </p>
               </div>
-              <div style={{ marginBottom: "14px" }}>
-                <input placeholder="Group name (e.g. Core Branch 2026)" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required style={inputStyle} />
-              </div>
-              <div style={{ marginBottom: "20px" }}>
-                <textarea placeholder="Description (optional)" rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} style={{ ...inputStyle, resize: "vertical", fontFamily: "inherit" }} />
-              </div>
+
               <button
-                type="submit"
-                disabled={submitting}
-                style={{ width: "100%", border: "none", borderRadius: "999px", padding: "12px", fontSize: "13px", fontWeight: 700, color: "#fff", background: "linear-gradient(to right,#8b5cf6,#d946ef)", cursor: submitting ? "not-allowed" : "pointer", opacity: submitting ? 0.6 : 1 }}
+                onClick={() => handleRemove(s._id)}
+                aria-label={`Remove ${s.name}`}
+                style={{
+                  display: "grid",
+                  placeItems: "center",
+                  width: "30px",
+                  height: "30px",
+                  flexShrink: 0,
+                  border: "1px solid rgba(var(--hs-bad-rgb),0.24)",
+                  borderRadius: "var(--hs-r-full)",
+                  background: "transparent",
+                  color: "var(--hs-bad)",
+                  transition: "background 0.2s var(--hs-ease)",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(var(--hs-bad-rgb),0.14)")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
               >
-                {submitting ? "Creating..." : "Create Group"}
+                <UserMinus size={14} />
               </button>
-            </motion.form>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            </div>
+          ))}
 
-      {/* Group detail drawer */}
-      <AnimatePresence>
-        {activeGroup && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setActiveGroup(null)}
-            style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)", display: "flex", justifyContent: "flex-end", zIndex: 100 }}
-          >
-            <motion.div
-              initial={{ x: 40, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: 40, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
-              style={{ width: "100%", maxWidth: "440px", height: "100%", overflowY: "auto", background: "#1a1030", borderLeft: "1px solid rgba(216,180,254,0.15)", padding: "26px", boxSizing: "border-box" }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "20px" }}>
-                <div>
-                  <h3 style={{ margin: 0, fontSize: "18px", fontWeight: 800, color: "#fff" }}>{activeGroup.group?.name}</h3>
-                  <p style={{ margin: "4px 0 0", fontSize: "12px", color: "#a897c9" }}>{activeGroup.group?.studentCount} members</p>
-                </div>
-                <button onClick={() => setActiveGroup(null)} style={{ border: "none", background: "transparent", color: "#a897c9", cursor: "pointer" }}>
-                  <X size={18} />
-                </button>
-              </div>
-
-              <div style={{ display: "flex", gap: "8px", marginBottom: "20px" }}>
-                <select value={assignId} onChange={(e) => setAssignId(e.target.value)} style={{ ...inputStyle, flex: 1 }}>
-                  <option value="">Select student to add...</option>
-                  {availableStudents.map((s) => (
-                    <option key={s._id} value={s._id}>
-                      {s.name} ({s.rollNo || "no roll"})
-                    </option>
-                  ))}
-                </select>
-                <button
-                  onClick={handleAssign}
-                  disabled={!assignId}
-                  style={{ display: "flex", alignItems: "center", gap: "6px", border: "none", borderRadius: "10px", padding: "0 16px", fontSize: "12px", fontWeight: 700, color: "#fff", background: "linear-gradient(to right,#8b5cf6,#d946ef)", cursor: assignId ? "pointer" : "not-allowed", opacity: assignId ? 1 : 0.5 }}
-                >
-                  <UserPlus size={14} /> Add
-                </button>
-              </div>
-
-              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                {(activeGroup.group?.students || []).map((s) => (
-                  <div key={s._id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderRadius: "12px", background: "rgba(255,255,255,0.03)" }}>
-                    <div>
-                      <p style={{ margin: 0, fontSize: "13px", fontWeight: 600, color: "#fff" }}>{s.name}</p>
-                      <p style={{ margin: 0, fontSize: "11px", color: "#7c6f93" }}>
-                        {s.rollNo || "—"} · {s.branch || "—"}
-                      </p>
-                    </div>
-                    <button onClick={() => handleRemove(s._id)} style={{ border: "none", background: "transparent", color: "#fda4af", cursor: "pointer" }}>
-                      <UserMinus size={15} />
-                    </button>
-                  </div>
-                ))}
-                {(activeGroup.group?.students || []).length === 0 && (
-                  <p style={{ fontSize: "12px", color: "#7c6f93", textAlign: "center", padding: "20px 0" }}>No members yet — add one above.</p>
-                )}
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          {members.length === 0 && (
+            <p style={{ fontSize: "12.5px", color: "var(--hs-dim)", textAlign: "center", padding: "26px 0" }}>
+              No members yet — add one above.
+            </p>
+          )}
+        </div>
+      </Drawer>
     </div>
   );
 };

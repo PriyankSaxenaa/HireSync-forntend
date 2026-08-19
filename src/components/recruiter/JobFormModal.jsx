@@ -1,27 +1,11 @@
+// src/components/recruiter/JobFormModal.jsx
 import { useState } from "react";
-import { X } from "lucide-react";
+import { Briefcase, Building2, MapPin, Wallet, Calendar, Sparkles, FileText } from "lucide-react";
+import Modal from "../fx/Modal";
+import MagneticButton from "../fx/MagneticButton";
+import { FormField, Input, TextArea } from "../forms/FormField";
 
-const fieldStyle = {
-  width: "100%",
-  boxSizing: "border-box",
-  borderRadius: "10px",
-  padding: "11px 14px",
-  fontSize: "14px",
-  background: "#0b0f17",
-  color: "#fff",
-  border: "1px solid rgba(255,255,255,0.1)",
-  outline: "none",
-};
-
-const labelStyle = {
-  display: "block",
-  marginBottom: "6px",
-  fontSize: "12px",
-  fontWeight: 700,
-  letterSpacing: "0.03em",
-  color: "#94a3b8",
-};
-
+// <input type="date"> only accepts YYYY-MM-DD.
 const toInputDate = (value) => {
   if (!value) return "";
   const d = new Date(value);
@@ -59,145 +43,104 @@ const JobFormModal = ({ job, onClose, onSubmit }) => {
     }
   };
 
+  // Live preview of the comma-separated skills as chips.
+  const skillPreview = form.skillsRequired
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
   return (
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(0,0,0,0.6)",
-        backdropFilter: "blur(4px)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "20px",
-        zIndex: 100,
-      }}
-      onClick={onClose}
+    <Modal
+      open
+      onClose={onClose}
+      icon={Briefcase}
+      title={job ? "Edit job" : "Post a new job"}
+      subtitle={job ? "Update the details candidates see." : "Publish a role and start collecting applications."}
+      width={580}
     >
-      <form
-        onSubmit={handleSubmit}
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          width: "100%",
-          maxWidth: "560px",
-          maxHeight: "90vh",
-          overflowY: "auto",
-          background: "#131a26",
-          border: "1px solid rgba(255,255,255,0.08)",
-          borderRadius: "20px",
-          padding: "28px",
-          boxSizing: "border-box",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "22px" }}>
-          <h2 style={{ margin: 0, fontSize: "19px", fontWeight: 800, color: "#fff" }}>
-            {job ? "Edit Job" : "Post a New Job"}
-          </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            style={{
-              width: "32px",
-              height: "32px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              border: "1px solid rgba(255,255,255,0.12)",
-              borderRadius: "999px",
-              background: "transparent",
-              color: "#fff",
-              cursor: "pointer",
-            }}
-          >
-            <X size={15} />
-          </button>
+      <form onSubmit={handleSubmit}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "0 14px" }}>
+          <FormField label="Job title" icon={Briefcase} marginBottom={16}>
+            <Input name="title" value={form.title} onChange={handleChange} required placeholder="Frontend Engineer" />
+          </FormField>
+
+          <FormField label="Company" icon={Building2} marginBottom={16}>
+            <Input name="company" value={form.company} onChange={handleChange} required placeholder="Acme Inc." />
+          </FormField>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginBottom: "14px" }}>
-          <div>
-            <label style={labelStyle}>Job Title</label>
-            <input name="title" value={form.title} onChange={handleChange} required style={fieldStyle} />
-          </div>
-          <div>
-            <label style={labelStyle}>Company</label>
-            <input name="company" value={form.company} onChange={handleChange} required style={fieldStyle} />
-          </div>
-        </div>
-
-        <div style={{ marginBottom: "14px" }}>
-          <label style={labelStyle}>Description</label>
-          <textarea
+        <FormField label="Description" icon={FileText} marginBottom={16}>
+          <TextArea
             name="description"
             value={form.description}
             onChange={handleChange}
             required
             minLength={20}
             rows={4}
-            style={{ ...fieldStyle, resize: "vertical", fontFamily: "inherit" }}
+            placeholder="What the role involves, who you're looking for, what the team is like…"
           />
-        </div>
+        </FormField>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginBottom: "14px" }}>
-          <div>
-            <label style={labelStyle}>Location</label>
-            <input name="location" value={form.location} onChange={handleChange} required style={fieldStyle} />
-          </div>
-          <div>
-            <label style={labelStyle}>Salary Range</label>
-            <input
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "0 14px" }}>
+          <FormField label="Location" icon={MapPin} marginBottom={16}>
+            <Input name="location" value={form.location} onChange={handleChange} required placeholder="Bengaluru, India" />
+          </FormField>
+
+          <FormField label="Salary range" icon={Wallet} marginBottom={16}>
+            <Input
               name="salaryRange"
               value={form.salaryRange}
               onChange={handleChange}
               placeholder="e.g. 6-10 LPA"
-              style={fieldStyle}
             />
-          </div>
+          </FormField>
         </div>
 
-        <div style={{ marginBottom: "14px" }}>
-          <label style={labelStyle}>Required Skills (comma separated)</label>
-          <input
+        <FormField
+          label="Required skills"
+          icon={Sparkles}
+          marginBottom={skillPreview.length ? 10 : 16}
+          hint="Comma separated — these drive candidate matching."
+        >
+          <Input
             name="skillsRequired"
             value={form.skillsRequired}
             onChange={handleChange}
             required
             placeholder="react, node.js, mongodb"
-            style={fieldStyle}
           />
-        </div>
+        </FormField>
 
-        <div style={{ marginBottom: "24px" }}>
-          <label style={labelStyle}>Application Deadline</label>
-          <input
+        {skillPreview.length > 0 && (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "18px" }}>
+            {skillPreview.map((s, i) => (
+              <span key={`${s}-${i}`} className="hs-chip" style={{ fontSize: "10.5px", padding: "3px 10px" }}>
+                {s}
+              </span>
+            ))}
+          </div>
+        )}
+
+        <FormField label="Application deadline" icon={Calendar} marginBottom={24}>
+          <Input
             type="date"
             name="applicationDeadline"
             value={form.applicationDeadline}
             onChange={handleChange}
             required
-            style={fieldStyle}
           />
-        </div>
+        </FormField>
 
-        <button
+        <MagneticButton
           type="submit"
           disabled={submitting}
-          style={{
-            width: "100%",
-            border: "none",
-            borderRadius: "999px",
-            padding: "13px",
-            fontSize: "14px",
-            fontWeight: 700,
-            color: "#fff",
-            background: "linear-gradient(to right,#f59e0b,#f43f5e)",
-            cursor: submitting ? "not-allowed" : "pointer",
-            opacity: submitting ? 0.6 : 1,
-          }}
+          strength={0.1}
+          style={{ width: "100%", padding: "14px", fontSize: "14px" }}
         >
-          {submitting ? "Saving..." : job ? "Save Changes" : "Post Job"}
-        </button>
+          {submitting ? "Saving…" : job ? "Save changes" : "Post job"}
+        </MagneticButton>
       </form>
-    </div>
+    </Modal>
   );
 };
 

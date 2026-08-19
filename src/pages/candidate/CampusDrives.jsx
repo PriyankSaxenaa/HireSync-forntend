@@ -4,9 +4,11 @@ import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { School } from "lucide-react";
 import DriveCard from "../../components/candidate/DriveCard";
-import EmptyState from "../../components/candidate/EmptyState";
-import { getCampusDrives, respondToDrive } from "../../api/campus.api";
 import MyGroupBanner from "../../components/candidate/MyGroupBanner";
+import EmptyState from "../../components/fx/EmptyState";
+import PageHeader from "../../components/fx/PageHeader";
+import { SkeletonGrid } from "../../components/fx/Skeleton";
+import { getCampusDrives, respondToDrive } from "../../api/campus.api";
 
 const CampusDrives = () => {
   const navigate = useNavigate();
@@ -47,24 +49,32 @@ const CampusDrives = () => {
     }
   };
 
-  if (loading) return <p style={{ color: "#a897c9" }}>Loading campus drives...</p>;
+  const awaiting = drives.filter((d) => d.status !== "closed" && !d.myResponse).length;
 
   return (
     <div>
-      <div style={{ marginBottom: "22px" }}>
-        <h1 style={{ margin: 0, fontSize: "24px", fontWeight: 800, color: "#fff" }}>Campus Drives</h1>
-        <p style={{ margin: "6px 0 0", fontSize: "13.5px", color: "#a897c9" }}>Drives posted by your college's placement cell.</p>
-      </div>
+      <PageHeader
+        eyebrow="Campus"
+        icon={School}
+        title="Campus drives"
+        liveLabel={awaiting > 0 ? `${awaiting} AWAITING YOU` : "UP TO DATE"}
+        subtitle="Drives posted by your college's placement cell. Respond before the deadline to stay in the running."
+      />
 
-      {/* Only makes sense to show a placement group if the student is actually
-          linked to a college — MyGroupBanner also self-guards (renders null
-          if there's no group), this just avoids the extra network call. */}
+      {/* Only fetch the group banner for on-campus students — it also
+          self-guards by rendering null when there's no group. */}
       {!offCampusMessage && <MyGroupBanner />}
 
-      {offCampusMessage ? (
+      {loading ? (
+        <SkeletonGrid count={3} />
+      ) : offCampusMessage ? (
         <EmptyState icon={School} title="No campus linked to your account" subtitle={offCampusMessage} />
       ) : drives.length === 0 ? (
-        <EmptyState icon={School} title="No drives posted yet" subtitle="Check back once your placement cell posts a new drive." />
+        <EmptyState
+          icon={School}
+          title="No drives posted yet"
+          subtitle="Check back once your placement cell publishes a new drive — you'll also get a notification."
+        />
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "18px" }}>
           {drives.map((d) => (

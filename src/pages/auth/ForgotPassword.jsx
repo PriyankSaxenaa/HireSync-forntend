@@ -1,88 +1,32 @@
 // src/pages/auth/ForgotPassword.jsx
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { AnimatePresence, motion } from "framer-motion";
 import toast from "react-hot-toast";
+import { Mail, Lock, ArrowLeft, ArrowRight, Check, KeyRound } from "lucide-react";
 import { sendForgotPasswordOtp, verifyForgotPasswordOtp, resetPassword } from "../../api/auth.api";
 import AuthLayout from "../../layouts/AuthLayout";
-import { FormField, inputStyle } from "../../components/forms/FormField";
+import AuthCard from "../../components/forms/AuthCard";
+import { FormField, Input, PasswordInput } from "../../components/forms/FormField";
+import OtpInput from "../../components/forms/OtpInput";
+import StepRail from "../../components/forms/StepRail";
+import MagneticButton from "../../components/fx/MagneticButton";
 
-const focusHandlers = {
-  onFocus: (e) => (e.target.style.borderColor = "#6366f1"),
-  onBlur: (e) => (e.target.style.borderColor = "transparent"),
+const stepFade = {
+  initial: { opacity: 0, x: 22 },
+  animate: { opacity: 1, x: 0 },
+  exit: { opacity: 0, x: -22 },
+  transition: { duration: 0.32, ease: [0.22, 1, 0.36, 1] },
 };
 
-// ── Step indicator ───────────────────────────────────────────────────────────
-const StepDots = ({ step }) => (
-  <div style={{ display: "flex", gap: "6px", marginBottom: "28px" }}>
-    {[1, 2, 3].map((n) => (
-      <div
-        key={n}
-        style={{
-          flex: 1,
-          height: "4px",
-          borderRadius: "999px",
-          background: n <= step ? "linear-gradient(to right,#6366f1,#22d3ee)" : "rgba(255,255,255,0.1)",
-          transition: "background 0.3s",
-        }}
-      />
-    ))}
-  </div>
-);
-
-// ── 6-box OTP input (same as Register.jsx) ──────────────────────────────────
-const OtpInput = ({ value, onChange }) => {
-  const refs = useRef([]);
-
-  const handleChange = (i, val) => {
-    if (!/^[0-9]?$/.test(val)) return;
-    const digits = value.split("");
-    digits[i] = val;
-    const next = digits.join("").slice(0, 6);
-    onChange(next);
-    if (val && i < 5) refs.current[i + 1]?.focus();
-  };
-
-  const handleKeyDown = (i, e) => {
-    if (e.key === "Backspace" && !value[i] && i > 0) {
-      refs.current[i - 1]?.focus();
-    }
-  };
-
-  const handlePaste = (e) => {
-    e.preventDefault();
-    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
-    onChange(pasted);
-    refs.current[Math.min(pasted.length, 5)]?.focus();
-  };
-
-  return (
-    <div style={{ display: "flex", gap: "10px", justifyContent: "center" }} onPaste={handlePaste}>
-      {Array.from({ length: 6 }).map((_, i) => (
-        <input
-          key={i}
-          ref={(el) => (refs.current[i] = el)}
-          value={value[i] || ""}
-          onChange={(e) => handleChange(i, e.target.value)}
-          onKeyDown={(e) => handleKeyDown(i, e)}
-          maxLength={1}
-          inputMode="numeric"
-          style={{
-            width: "44px",
-            height: "52px",
-            textAlign: "center",
-            fontSize: "20px",
-            fontWeight: 700,
-            borderRadius: "10px",
-            background: "#eef0ff",
-            color: "#0f172a",
-            border: "2px solid transparent",
-            outline: "none",
-          }}
-          {...focusHandlers}
-        />
-      ))}
-    </div>
-  );
+// Cheap strength read-out — length plus character-class variety.
+const scorePassword = (pw = "") => {
+  if (!pw) return 0;
+  let score = Math.min(pw.length / 12, 1) * 55;
+  if (/[a-z]/.test(pw) && /[A-Z]/.test(pw)) score += 15;
+  if (/\d/.test(pw)) score += 15;
+  if (/[^A-Za-z0-9]/.test(pw)) score += 15;
+  return Math.min(Math.round(score), 100);
 };
 
 const ForgotPassword = () => {
@@ -161,185 +105,181 @@ const ForgotPassword = () => {
     }
   };
 
+  const strength = scorePassword(form.newPassword);
+  const strengthLabel = strength > 75 ? "Strong" : strength > 45 ? "Decent" : "Weak";
+  const strengthTone = strength > 75 ? "var(--hs-ok)" : strength > 45 ? "var(--hs-warn)" : "var(--hs-bad)";
+  const mismatch = form.confirmPassword.length > 0 && form.newPassword !== form.confirmPassword;
+
+  const subtitle = {
+    1: "Enter the email linked to your account.",
+    2: "Enter the six-digit code we just sent you.",
+    3: "Choose a new password.",
+  }[step];
+
   return (
     <AuthLayout>
-      <div
-        style={{
-          width: "100%",
-          maxWidth: "420px",
-          background: "#0c1120",
-          border: "1px solid rgba(255,255,255,0.1)",
-          borderRadius: "20px",
-          padding: "40px",
-          boxSizing: "border-box",
-        }}
+      <AuthCard
+        title="Reset your password"
+        subtitle={subtitle}
+        footer={
+          <>
+            Remembered it?{" "}
+            <Link to="/login" style={{ fontWeight: 700, color: "var(--hs-a2)" }}>
+              Back to login
+            </Link>
+          </>
+        }
       >
-        <h1 style={{ margin: 0, fontSize: "26px", fontWeight: 800, color: "#fff" }}>
-          Reset your password
-        </h1>
-        <p style={{ margin: "8px 0 24px", fontSize: "14px", color: "#94a3b8" }}>
-          {step === 1 && "Enter the email linked to your account"}
-          {step === 2 && "Enter the code we just sent you"}
-          {step === 3 && "Choose a new password"}
-        </p>
+        <StepRail step={step} steps={["Email", "Verify", "Reset"]} />
 
-        <StepDots step={step} />
+        <AnimatePresence mode="wait">
+          {/* ── Step 1: email ───────────────────────────────────────────── */}
+          {step === 1 && (
+            <motion.form key="s1" onSubmit={handleSendOtp} {...stepFade}>
+              <FormField label="Email" icon={Mail} marginBottom={26}>
+                <Input
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  autoComplete="email"
+                />
+              </FormField>
 
-        {/* Step 1: email */}
-        {step === 1 && (
-          <form onSubmit={handleSendOtp}>
-            <FormField label="Email" marginBottom={28}>
-              <input
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                autoComplete="email"
-                style={inputStyle}
-                {...focusHandlers}
-              />
-            </FormField>
+              <MagneticButton
+                type="submit"
+                disabled={sendingOtp}
+                strength={0.12}
+                style={{ width: "100%", padding: "14px", fontSize: "15px", borderRadius: "var(--hs-r-full)" }}
+              >
+                {sendingOtp ? "Sending code…" : "Send reset code"} <ArrowRight size={16} />
+              </MagneticButton>
+            </motion.form>
+          )}
 
-            <button
-              type="submit"
-              disabled={sendingOtp}
-              style={{
-                width: "100%",
-                border: "none",
-                borderRadius: "9999px",
-                padding: "14px",
-                fontSize: "15px",
-                fontWeight: 700,
-                color: "#fff",
-                background: "linear-gradient(to right, #6366f1, #22d3ee)",
-                cursor: sendingOtp ? "not-allowed" : "pointer",
-                opacity: sendingOtp ? 0.6 : 1,
-              }}
-            >
-              {sendingOtp ? "Sending code..." : "Send Reset Code"}
-            </button>
-          </form>
-        )}
+          {/* ── Step 2: OTP ─────────────────────────────────────────────── */}
+          {step === 2 && (
+            <motion.form key="s2" onSubmit={handleVerifyOtp} {...stepFade}>
+              <p style={{ textAlign: "center", fontSize: "13px", color: "var(--hs-muted)", marginBottom: "20px" }}>
+                Code sent to <span style={{ color: "var(--hs-text)", fontWeight: 700 }}>{email}</span>
+              </p>
 
-        {/* Step 2: OTP */}
-        {step === 2 && (
-          <form onSubmit={handleVerifyOtp}>
-            <p style={{ textAlign: "center", fontSize: "13px", color: "#94a3b8", marginBottom: "18px" }}>
-              Code sent to <span style={{ color: "#e2e8f0", fontWeight: 600 }}>{email}</span>
-            </p>
+              <div style={{ marginBottom: "24px" }}>
+                <OtpInput value={otp} onChange={setOtp} disabled={verifying} />
+              </div>
 
-            <div style={{ marginBottom: "22px" }}>
-              <OtpInput value={otp} onChange={setOtp} />
-            </div>
+              <MagneticButton
+                type="submit"
+                disabled={verifying}
+                strength={0.12}
+                style={{ width: "100%", padding: "14px", fontSize: "15px", marginBottom: "16px", borderRadius: "var(--hs-r-full)" }}
+              >
+                {verifying ? "Verifying…" : "Verify code"} <Check size={16} />
+              </MagneticButton>
 
-            <button
-              type="submit"
-              disabled={verifying}
-              style={{
-                width: "100%",
-                border: "none",
-                borderRadius: "9999px",
-                padding: "14px",
-                fontSize: "15px",
-                fontWeight: 700,
-                color: "#fff",
-                background: "linear-gradient(to right, #6366f1, #22d3ee)",
-                cursor: verifying ? "not-allowed" : "pointer",
-                opacity: verifying ? 0.6 : 1,
-                marginBottom: "14px",
-              }}
-            >
-              {verifying ? "Verifying..." : "Verify Code"}
-            </button>
+              <div style={{ textAlign: "center" }}>
+                <button
+                  type="button"
+                  onClick={handleSendOtp}
+                  disabled={cooldown > 0 || sendingOtp}
+                  style={{
+                    border: "none",
+                    background: "transparent",
+                    fontSize: "12.5px",
+                    fontWeight: 700,
+                    color: cooldown > 0 ? "var(--hs-dim)" : "var(--hs-a2)",
+                    cursor: cooldown > 0 ? "not-allowed" : "pointer",
+                  }}
+                >
+                  {cooldown > 0 ? `Resend code in ${cooldown}s` : "Resend code"}
+                </button>
+              </div>
 
-            <div style={{ textAlign: "center" }}>
               <button
                 type="button"
-                onClick={handleSendOtp}
-                disabled={cooldown > 0 || sendingOtp}
+                onClick={() => setStep(1)}
                 style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "5px",
+                  margin: "16px auto 0",
                   border: "none",
                   background: "transparent",
-                  fontSize: "13px",
-                  fontWeight: 600,
-                  color: cooldown > 0 ? "#475569" : "#818cf8",
-                  cursor: cooldown > 0 ? "not-allowed" : "pointer",
+                  fontSize: "12px",
+                  color: "var(--hs-dim)",
                 }}
               >
-                {cooldown > 0 ? `Resend code in ${cooldown}s` : "Resend code"}
+                <ArrowLeft size={12} /> Change email
               </button>
-            </div>
+            </motion.form>
+          )}
 
-            <button
-              type="button"
-              onClick={() => setStep(1)}
-              style={{ display: "block", margin: "14px auto 0", border: "none", background: "transparent", fontSize: "12.5px", color: "#64748b", cursor: "pointer" }}
-            >
-              ← Change email
-            </button>
-          </form>
-        )}
+          {/* ── Step 3: new password ────────────────────────────────────── */}
+          {step === 3 && (
+            <motion.form key="s3" onSubmit={handleResetPassword} {...stepFade}>
+              <FormField label="New password" icon={Lock} marginBottom={14}>
+                <PasswordInput
+                  name="newPassword"
+                  placeholder="••••••••"
+                  value={form.newPassword}
+                  onChange={handleFormChange}
+                  required
+                  autoComplete="new-password"
+                />
+              </FormField>
 
-        {/* Step 3: new password */}
-        {step === 3 && (
-          <form onSubmit={handleResetPassword}>
-            <FormField label="New Password">
-              <input
-                type="password"
-                name="newPassword"
-                placeholder="••••••••"
-                value={form.newPassword}
-                onChange={handleFormChange}
-                required
-                autoComplete="new-password"
-                style={inputStyle}
-                {...focusHandlers}
-              />
-            </FormField>
+              {/* Strength meter — fills and re-tints as you type */}
+              {form.newPassword && (
+                <div style={{ marginBottom: "20px" }}>
+                  <div
+                    style={{
+                      height: "4px",
+                      borderRadius: "var(--hs-r-full)",
+                      background: "rgba(255,255,255,0.08)",
+                      overflow: "hidden",
+                    }}
+                  >
+                    <motion.div
+                      animate={{ width: `${strength}%` }}
+                      transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                      style={{ height: "100%", borderRadius: "inherit", background: strengthTone }}
+                    />
+                  </div>
+                  <p style={{ margin: "6px 0 0", fontSize: "11px", fontWeight: 700, color: strengthTone }}>
+                    {strengthLabel} password
+                  </p>
+                </div>
+              )}
 
-            <FormField label="Confirm New Password" marginBottom={32}>
-              <input
-                type="password"
-                name="confirmPassword"
-                placeholder="••••••••"
-                value={form.confirmPassword}
-                onChange={handleFormChange}
-                required
-                autoComplete="new-password"
-                style={inputStyle}
-                {...focusHandlers}
-              />
-            </FormField>
+              <FormField
+                label="Confirm new password"
+                icon={KeyRound}
+                marginBottom={28}
+                error={mismatch ? "Passwords don't match yet." : undefined}
+              >
+                <PasswordInput
+                  name="confirmPassword"
+                  placeholder="••••••••"
+                  value={form.confirmPassword}
+                  onChange={handleFormChange}
+                  required
+                  autoComplete="new-password"
+                />
+              </FormField>
 
-            <button
-              type="submit"
-              disabled={submitting}
-              style={{
-                width: "100%",
-                border: "none",
-                borderRadius: "9999px",
-                padding: "14px",
-                fontSize: "15px",
-                fontWeight: 700,
-                color: "#fff",
-                background: "linear-gradient(to right, #6366f1, #22d3ee)",
-                cursor: submitting ? "not-allowed" : "pointer",
-                opacity: submitting ? 0.6 : 1,
-              }}
-            >
-              {submitting ? "Resetting..." : "Reset Password"}
-            </button>
-          </form>
-        )}
-
-        <p style={{ marginTop: "24px", textAlign: "center", fontSize: "14px", color: "#94a3b8" }}>
-          Remembered it?{" "}
-          <Link to="/login" style={{ fontWeight: 700, color: "#818cf8" }}>
-            Back to login
-          </Link>
-        </p>
-      </div>
+              <MagneticButton
+                type="submit"
+                disabled={submitting}
+                strength={0.12}
+                style={{ width: "100%", padding: "14px", fontSize: "15px", borderRadius: "var(--hs-r-full)" }}
+              >
+                {submitting ? "Resetting…" : "Reset password"} <Check size={16} />
+              </MagneticButton>
+            </motion.form>
+          )}
+        </AnimatePresence>
+      </AuthCard>
     </AuthLayout>
   );
 };

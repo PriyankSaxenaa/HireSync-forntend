@@ -1,39 +1,45 @@
-import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+// src/pages/recruiter/JobApplicants.jsx
+import { useEffect, useMemo, useState } from "react";
+import { useParams } from "react-router-dom";
+import { motion } from "framer-motion";
 import toast from "react-hot-toast";
-import { ArrowLeft, MapPin, FileText, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { MapPin, FileText, Users, Check, X } from "lucide-react";
 import { getApplicantsForJob, updateApplicationStatus } from "../../api/applications.api";
+import SpotlightCard from "../../components/fx/SpotlightCard";
+import StatusPill from "../../components/fx/StatusPill";
+import PageHeader from "../../components/fx/PageHeader";
+import EmptyState from "../../components/fx/EmptyState";
+import BackLink from "../../components/fx/BackLink";
+import Counter from "../../components/fx/Counter";
+import Loader from "../../components/fx/Loader";
+import { initialsOf } from "../../components/common/UserMenu";
 
-const STATUS_STYLES = {
-  pending: { bg: "rgba(251,191,36,0.15)", color: "#fcd34d", icon: Clock, label: "Pending" },
-  accepted: { bg: "rgba(52,211,153,0.15)", color: "#6ee7b7", icon: CheckCircle2, label: "Accepted" },
-  rejected: { bg: "rgba(251,113,133,0.15)", color: "#fda4af", icon: XCircle, label: "Rejected" },
-};
-
-const initialsOf = (name = "?") =>
-  name.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase();
+const FILTERS = [
+  { key: "all", label: "All" },
+  { key: "pending", label: "Pending" },
+  { key: "accepted", label: "Accepted" },
+  { key: "rejected", label: "Rejected" },
+];
 
 const JobApplicants = () => {
   const { jobId } = useParams();
-  const navigate = useNavigate();
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState(null);
-
-  const fetchApplicants = async () => {
-    setLoading(true);
-    try {
-      const { data } = await getApplicantsForJob(jobId);
-      setApplications(data.applications || []);
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to load applicants");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [filter, setFilter] = useState("all");
 
   useEffect(() => {
-    fetchApplicants();
+    (async () => {
+      setLoading(true);
+      try {
+        const { data } = await getApplicantsForJob(jobId);
+        setApplications(data.applications || []);
+      } catch (err) {
+        toast.error(err.response?.data?.message || "Failed to load applicants");
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, [jobId]);
 
   const handleStatus = async (applicationId, status) => {
@@ -49,198 +55,233 @@ const JobApplicants = () => {
     }
   };
 
-  if (loading) return <p style={{ color: "#94a3b8" }}>Loading applicants...</p>;
+  const counts = useMemo(() => {
+    const base = { all: applications.length, pending: 0, accepted: 0, rejected: 0 };
+    applications.forEach((a) => {
+      if (base[a.status] !== undefined) base[a.status] += 1;
+    });
+    return base;
+  }, [applications]);
+
+  const visible = useMemo(
+    () => (filter === "all" ? applications : applications.filter((a) => a.status === filter)),
+    [applications, filter]
+  );
+
+  if (loading) return <Loader label="Loading applicants" full />;
+
+  const total = applications.length;
 
   return (
     <div>
-      <button
-        onClick={() => navigate("/recruiter/jobs")}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "6px",
-          border: "none",
-          background: "transparent",
-          color: "#94a3b8",
-          fontSize: "13px",
-          fontWeight: 600,
-          cursor: "pointer",
-          marginBottom: "18px",
-          padding: 0,
-        }}
-      >
-        <ArrowLeft size={14} /> Back to My Jobs
-      </button>
+      <BackLink to="/recruiter/jobs" label="Back to my jobs" />
 
-      <h1 style={{ margin: "0 0 4px", fontSize: "26px", fontWeight: 800, color: "#fff" }}>Applicants</h1>
-      <p style={{ margin: "0 0 24px", fontSize: "14px", color: "#94a3b8" }}>
-        {applications.length} candidate{applications.length !== 1 ? "s" : ""} applied to this job.
-      </p>
+      <PageHeader
+        eyebrow="Applicant pool"
+        icon={Users}
+        title="Applicants"
+        liveLabel={counts.pending > 0 ? `${counts.pending} TO REVIEW` : "ALL REVIEWED"}
+        subtitle={
+          <>
+            <b style={{ color: "var(--hs-text)" }}>
+              <Counter value={total} />
+            </b>{" "}
+            candidate{total === 1 ? "" : "s"} applied to this role.
+          </>
+        }
+      />
 
-      <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-        {applications.map((app) => {
-          const status = STATUS_STYLES[app.status] || STATUS_STYLES.pending;
-          const StatusIcon = status.icon;
-          const candidate = app.candidate || {};
-
-          return (
-            <div
-              key={app._id}
-              style={{
-                background: "#131a26",
-                border: "1px solid rgba(255,255,255,0.06)",
-                borderRadius: "18px",
-                padding: "20px",
-                display: "flex",
-                flexWrap: "wrap",
-                alignItems: "center",
-                gap: "16px",
-              }}
-            >
-              <div
+      {total > 0 && (
+        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "20px" }}>
+          {FILTERS.map((f) => {
+            const active = filter === f.key;
+            return (
+              <button
+                key={f.key}
+                onClick={() => setFilter(f.key)}
                 style={{
-                  width: "44px",
-                  height: "44px",
-                  borderRadius: "50%",
-                  background: "linear-gradient(135deg,#f59e0b,#f43f5e)",
                   display: "flex",
                   alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "14px",
+                  gap: "7px",
+                  padding: "7px 15px",
+                  borderRadius: "var(--hs-r-full)",
+                  fontSize: "12.5px",
                   fontWeight: 700,
-                  color: "#fff",
-                  flexShrink: 0,
+                  color: active ? "var(--hs-a2)" : "var(--hs-muted)",
+                  background: active ? "rgba(var(--hs-a2-rgb),0.13)" : "var(--hs-surface)",
+                  border: `1px solid ${active ? "rgba(var(--hs-a2-rgb),0.4)" : "var(--hs-line)"}`,
+                  transition: "all 0.22s var(--hs-ease)",
                 }}
               >
-                {initialsOf(candidate.name)}
-              </div>
+                {f.label}
+                <span style={{ fontSize: "11px", opacity: 0.75 }}>{counts[f.key]}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
-              <div style={{ flex: "1 1 200px", minWidth: 0 }}>
-                <p style={{ margin: 0, fontSize: "15px", fontWeight: 700, color: "#fff" }}>{candidate.name}</p>
-                <p style={{ margin: "2px 0 0", fontSize: "13px", color: "#94a3b8" }}>{candidate.email}</p>
-                {candidate.location && (
-                  <span style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "12px", color: "#64748b", marginTop: "4px" }}>
-                    <MapPin size={11} /> {candidate.location}
-                  </span>
-                )}
-              </div>
+      {visible.length === 0 ? (
+        <EmptyState
+          icon={Users}
+          title={total === 0 ? "No applicants yet" : `No ${filter} applicants`}
+          subtitle={
+            total === 0
+              ? "As soon as someone applies to this role, they'll appear here with their resume and skills."
+              : "Try a different status filter."
+          }
+        />
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+          {visible.map((app, i) => {
+            const candidate = app.candidate || {};
+            const pending = app.status === "pending";
 
-              {candidate.skills?.length > 0 && (
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", flex: "1 1 220px" }}>
-                  {candidate.skills.slice(0, 6).map((s) => (
-                    <span
-                      key={s}
+            return (
+              <motion.div
+                key={app._id}
+                initial={{ opacity: 0, y: 14 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: Math.min(i * 0.04, 0.3), duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+              >
+                <SpotlightCard hover={false} live={pending} padding={20}>
+                  <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "16px" }}>
+                    <div
                       style={{
-                        fontSize: "11px",
-                        fontWeight: 600,
-                        color: "#fdba74",
-                        background: "rgba(245,158,11,0.12)",
-                        padding: "3px 9px",
-                        borderRadius: "999px",
-                      }}
-                    >
-                      {s}
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              <div style={{ display: "flex", alignItems: "center", gap: "10px", flexShrink: 0 }}>
-                {candidate.resumeUrl && (
-                  <a
-                    href={candidate.resumeUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "6px",
-                      fontSize: "12px",
-                      fontWeight: 600,
-                      color: "#93c5fd",
-                      textDecoration: "none",
-                      border: "1px solid rgba(147,197,253,0.3)",
-                      padding: "7px 12px",
-                      borderRadius: "999px",
-                    }}
-                  >
-                    <FileText size={13} /> Resume
-                  </a>
-                )}
-
-                <span
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "5px",
-                    fontSize: "11px",
-                    fontWeight: 700,
-                    color: status.color,
-                    background: status.bg,
-                    padding: "6px 12px",
-                    borderRadius: "999px",
-                  }}
-                >
-                  <StatusIcon size={12} /> {status.label}
-                </span>
-
-                {app.status === "pending" && (
-                  <>
-                    <button
-                      onClick={() => handleStatus(app._id, "accepted")}
-                      disabled={updatingId === app._id}
-                      style={{
-                        border: "none",
-                        borderRadius: "10px",
-                        padding: "8px 14px",
-                        fontSize: "12px",
-                        fontWeight: 700,
+                        width: "46px",
+                        height: "46px",
+                        flexShrink: 0,
+                        borderRadius: "50%",
+                        display: "grid",
+                        placeItems: "center",
+                        fontSize: "14px",
+                        fontWeight: 800,
                         color: "#fff",
-                        background: "linear-gradient(to right,#34d399,#10b981)",
-                        cursor: updatingId === app._id ? "not-allowed" : "pointer",
-                        opacity: updatingId === app._id ? 0.6 : 1,
+                        background: "var(--hs-a2)",
                       }}
                     >
-                      Accept
-                    </button>
-                    <button
-                      onClick={() => handleStatus(app._id, "rejected")}
-                      disabled={updatingId === app._id}
-                      style={{
-                        border: "1px solid rgba(251,113,133,0.4)",
-                        borderRadius: "10px",
-                        padding: "8px 14px",
-                        fontSize: "12px",
-                        fontWeight: 700,
-                        color: "#fda4af",
-                        background: "transparent",
-                        cursor: updatingId === app._id ? "not-allowed" : "pointer",
-                        opacity: updatingId === app._id ? 0.6 : 1,
-                      }}
-                    >
-                      Reject
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-          );
-        })}
+                      {initialsOf(candidate.name)}
+                    </div>
 
-        {applications.length === 0 && (
-          <div
-            style={{
-              textAlign: "center",
-              padding: "60px 20px",
-              color: "#475569",
-              border: "1px dashed rgba(255,255,255,0.1)",
-              borderRadius: "18px",
-            }}
-          >
-            No applicants yet for this job.
-          </div>
-        )}
-      </div>
+                    <div style={{ flex: "1 1 200px", minWidth: 0 }}>
+                      <p style={{ margin: 0, fontSize: "15px", fontWeight: 800, color: "var(--hs-text)" }}>
+                        {candidate.name}
+                      </p>
+                      <p style={{ margin: "2px 0 0", fontSize: "12.5px", color: "var(--hs-muted)" }}>
+                        {candidate.email}
+                      </p>
+                      {candidate.location && (
+                        <span
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "5px",
+                            fontSize: "11.5px",
+                            color: "var(--hs-dim)",
+                            marginTop: "5px",
+                          }}
+                        >
+                          <MapPin size={11} /> {candidate.location}
+                        </span>
+                      )}
+                    </div>
+
+                    {candidate.skills?.length > 0 && (
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", flex: "1 1 220px" }}>
+                        {candidate.skills.slice(0, 6).map((s) => (
+                          <span key={s} className="hs-chip" style={{ fontSize: "10.5px", padding: "3px 10px" }}>
+                            {s}
+                          </span>
+                        ))}
+                        {candidate.skills.length > 6 && (
+                          <span style={{ fontSize: "11px", color: "var(--hs-dim)", alignSelf: "center" }}>
+                            +{candidate.skills.length - 6}
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    <div style={{ display: "flex", alignItems: "center", gap: "9px", flexWrap: "wrap", flexShrink: 0 }}>
+                      {candidate.resumeUrl && (
+                        <a
+                          href={candidate.resumeUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "6px",
+                            fontSize: "12px",
+                            fontWeight: 700,
+                            color: "var(--hs-info)",
+                            border: "1px solid rgba(var(--hs-info-rgb),0.3)",
+                            background: "rgba(var(--hs-info-rgb),0.08)",
+                            padding: "8px 14px",
+                            borderRadius: "var(--hs-r-full)",
+                          }}
+                        >
+                          <FileText size={13} /> Resume
+                        </a>
+                      )}
+
+                      <StatusPill status={app.status} size="md" />
+
+                      {pending && (
+                        <>
+                          <button
+                            onClick={() => handleStatus(app._id, "accepted")}
+                            disabled={updatingId === app._id}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "6px",
+                              border: "none",
+                              borderRadius: "var(--hs-r-full)",
+                              padding: "9px 15px",
+                              fontSize: "12px",
+                              fontWeight: 700,
+                              color: "#fff",
+                              background: "var(--hs-ok)",
+                              cursor: updatingId === app._id ? "not-allowed" : "pointer",
+                              opacity: updatingId === app._id ? 0.6 : 1,
+                            }}
+                          >
+                            <Check size={13} /> Accept
+                          </button>
+
+                          <button
+                            onClick={() => handleStatus(app._id, "rejected")}
+                            disabled={updatingId === app._id}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "6px",
+                              border: "1px solid rgba(var(--hs-bad-rgb),0.35)",
+                              borderRadius: "var(--hs-r-full)",
+                              padding: "9px 15px",
+                              fontSize: "12px",
+                              fontWeight: 700,
+                              color: "var(--hs-bad)",
+                              background: "transparent",
+                              cursor: updatingId === app._id ? "not-allowed" : "pointer",
+                              opacity: updatingId === app._id ? 0.6 : 1,
+                              transition: "background 0.2s var(--hs-ease)",
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(var(--hs-bad-rgb),0.13)")}
+                            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                          >
+                            <X size={13} /> Reject
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </SpotlightCard>
+              </motion.div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };

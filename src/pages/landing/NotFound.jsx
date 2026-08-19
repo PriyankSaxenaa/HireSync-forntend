@@ -1,90 +1,96 @@
 // src/pages/landing/NotFound.jsx
-import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Home, ArrowLeft } from "lucide-react";
+import { Home, ArrowLeft, Compass } from "lucide-react";
+import Aurora from "../../components/fx/Aurora";
+import MagneticButton from "../../components/fx/MagneticButton";
+import Marquee from "../../components/fx/Marquee";
+import Logo from "../../components/common/Logo";
 
-const NotFound = () => {
-  return (
-    <main
-      style={{
-        minHeight: "100vh",
-        background: "#040611",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "24px",
-      }}
+const NotFound = () => (
+  <main
+    data-hs-role="brand"
+    style={{
+      position: "relative",
+      minHeight: "100vh",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: "24px",
+      overflow: "hidden",
+    }}
+  >
+    <Aurora fixed blobOpacity={0.45} intensity={1.2} />
+
+    {/* A "404" strip drifting behind the card, forever */}
+    <div
+      aria-hidden="true"
+      style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", opacity: 0.05 }}
     >
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        style={{ textAlign: "center", maxWidth: "420px" }}
+      <Marquee duration={26} gap={60} fade={false} pauseOnHover={false}>
+        {Array.from({ length: 6 }).map((_, i) => (
+          <span key={i} style={{ fontSize: "clamp(90px, 18vw, 220px)", fontWeight: 900, whiteSpace: "nowrap" }}>
+            404
+          </span>
+        ))}
+      </Marquee>
+    </div>
+
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+      style={{ position: "relative", zIndex: 2, textAlign: "center", maxWidth: "460px" }}
+    >
+      <div style={{ display: "flex", justifyContent: "center", marginBottom: "30px" }}>
+        <Logo />
+      </div>
+
+      <div
+        style={{
+          width: "68px",
+          height: "68px",
+          margin: "0 auto 22px",
+          borderRadius: "var(--hs-r-lg)",
+          display: "grid",
+          placeItems: "center",
+          background: "rgba(var(--hs-a2-rgb),0.14)",
+          border: "1px solid rgba(var(--hs-a2-rgb),0.3)",
+        }}
       >
-        <h1
-          style={{
-            margin: 0,
-            fontSize: "clamp(72px, 14vw, 120px)",
-            fontWeight: 900,
-            lineHeight: 1,
-            background: "linear-gradient(to right, #818cf8, #a78bfa, #22d3ee)",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-            backgroundClip: "text",
-          }}
-        >
-          404
-        </h1>
+        <Compass size={30} style={{ color: "var(--hs-a3)" }} />
+      </div>
 
-        <h2 style={{ margin: "16px 0 8px", fontSize: "22px", fontWeight: 800, color: "#fff" }}>
-          Page not found
-        </h2>
-        <p style={{ margin: "0 0 32px", fontSize: "14px", color: "#94a3b8", lineHeight: 1.6 }}>
-          The page you're looking for doesn't exist or may have been moved.
-        </p>
+      <h1
+        className="hs-gradient-text"
+        style={{
+          margin: 0,
+          fontSize: "clamp(70px, 14vw, 118px)",
+          fontWeight: 900,
+          lineHeight: 1,
+          letterSpacing: "-0.05em",
+        }}
+      >
+        404
+      </h1>
 
-        <div style={{ display: "flex", gap: "12px", justifyContent: "center", flexWrap: "wrap" }}>
-          <button
-            onClick={() => window.history.back()}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              border: "1px solid rgba(255,255,255,0.15)",
-              background: "rgba(255,255,255,0.05)",
-              color: "#fff",
-              borderRadius: "9999px",
-              padding: "12px 24px",
-              fontSize: "14px",
-              fontWeight: 600,
-              cursor: "pointer",
-            }}
-          >
-            <ArrowLeft size={16} /> Go Back
-          </button>
+      <h2 style={{ margin: "14px 0 10px", fontSize: "22px", fontWeight: 800, color: "var(--hs-text)" }}>
+        Page not found
+      </h2>
+      <p style={{ margin: "0 0 32px", fontSize: "14px", color: "var(--hs-muted)", lineHeight: 1.7 }}>
+        The page you&apos;re looking for doesn&apos;t exist, or it may have moved somewhere else.
+      </p>
 
-          <Link
-            to="/"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              borderRadius: "9999px",
-              padding: "12px 24px",
-              fontSize: "14px",
-              fontWeight: 700,
-              color: "#fff",
-              textDecoration: "none",
-              background: "linear-gradient(to right, #6366f1, #22d3ee)",
-              boxShadow: "0 0 25px rgba(99,102,241,0.35)",
-            }}
-          >
-            <Home size={16} /> Go Home
-          </Link>
-        </div>
-      </motion.div>
-    </main>
-  );
-};
+      <div style={{ display: "flex", gap: "12px", justifyContent: "center", flexWrap: "wrap" }}>
+        <MagneticButton variant="ghost" onClick={() => window.history.back()}>
+          <ArrowLeft size={16} /> Go back
+        </MagneticButton>
+        <MagneticButton to="/">
+          <Home size={16} /> Go home
+        </MagneticButton>
+      </div>
+    </motion.div>
+  </main>
+);
 
 export default NotFound;

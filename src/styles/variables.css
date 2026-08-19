@@ -1,0 +1,147 @@
+/* ============================================================================
+   HireSync — Design Tokens
+   Editorial-noir system: near-black canvas, one dominant accent hue per
+   surface used as a single dramatic spotlight — never a rainbow blend.
+   Typography and negative space carry the weight; color is used sparingly.
+   ========================================================================= */
+
+:root {
+  /* ── Canvas ─────────────────────────────────────────────────────────── */
+  --hs-bg: #060607;
+  --hs-bg-soft: #0a0a0c;
+  --hs-bg-elev: #0f0f12;
+
+  /* ── Surfaces — solid, hairline-bordered, no frosted glass ────────────── */
+  --hs-surface: rgba(255, 255, 255, 0.028);
+  --hs-surface-2: rgba(255, 255, 255, 0.05);
+  --hs-surface-3: rgba(255, 255, 255, 0.08);
+  --hs-line: rgba(255, 255, 255, 0.1);
+  --hs-line-strong: rgba(255, 255, 255, 0.2);
+
+  /* ── Type ───────────────────────────────────────────────────────────── */
+  --hs-text: #f2f1ee;
+  --hs-muted: #93939b;
+  --hs-dim: #55555d;
+  /* Technical/mono voice for labels, tickers and numbered rules — the
+     "engineered" counterpoint to the display headline face. System stack
+     only, no webfont fetch. */
+  --hs-mono: ui-monospace, "SFMono-Regular", "Consolas", "Liberation Mono", monospace;
+
+  /* Inverted palette for the one light interlude band on the landing page —
+     everywhere else stays dark. */
+  --hs-light-bg: #f4f3ef;
+  --hs-light-text: #0c0c0e;
+  --hs-light-muted: #5c5c62;
+  --hs-light-line: rgba(12, 12, 14, 0.12);
+
+  /* ── Accent — a single dominant hue per role, not a 3-stop rainbow ────
+     a1/a2/a3 stay close analogues of the same hue so legacy gradient
+     utilities read as a controlled duotone instead of a neon blend. ──── */
+  --hs-a1: #2c3ee0;
+  --hs-a2: #3c53f2;
+  --hs-a3: #5568f5;
+  --hs-a1-rgb: 44, 62, 224;
+  --hs-a2-rgb: 60, 83, 242;
+  --hs-a3-rgb: 85, 104, 245;
+
+  /* A second, sparingly-used signal color for emphasis marks and numerals —
+     mirrors the crimson counterpoint in editorial reference work. */
+  --hs-signal: #b3123f;
+  --hs-signal-rgb: 179, 18, 63;
+
+  /* Derived — a restrained duotone, not a flowing rainbow. */
+  --hs-grad: linear-gradient(135deg, var(--hs-a1), var(--hs-a3));
+  --hs-grad-soft: linear-gradient(
+    135deg,
+    rgba(var(--hs-a1-rgb), 0.14),
+    rgba(var(--hs-a3-rgb), 0.08)
+  );
+  --hs-glow: 0 0 1px rgba(var(--hs-a2-rgb), 0.9), 0 8px 28px rgba(var(--hs-a2-rgb), 0.22);
+  --hs-glow-sm: 0 4px 16px rgba(var(--hs-a2-rgb), 0.18);
+
+  /* ── Semantic ───────────────────────────────────────────────────────── */
+  --hs-ok: #2fae72;
+  --hs-ok-rgb: 47, 174, 114;
+  --hs-warn: #d69a2d;
+  --hs-warn-rgb: 214, 154, 45;
+  --hs-bad: #cf3355;
+  --hs-bad-rgb: 207, 51, 85;
+  --hs-info: #3c8bd6;
+  --hs-info-rgb: 60, 139, 214;
+
+  /* ── Depth — tight and dark, no colored bloom by default ──────────────── */
+  --hs-shadow-sm: 0 4px 16px rgba(0, 0, 0, 0.5);
+  --hs-shadow: 0 16px 44px rgba(0, 0, 0, 0.55);
+  --hs-shadow-lg: 0 30px 80px rgba(0, 0, 0, 0.65);
+
+  /* ── Geometry — mostly rectangular, rounding used sparingly ────────────── */
+  --hs-r-sm: 6px;
+  --hs-r: 10px;
+  --hs-r-lg: 14px;
+  --hs-r-xl: 18px;
+  --hs-r-full: 999px;
+
+  /* ── Motion ─────────────────────────────────────────────────────────── */
+  --hs-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --hs-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --hs-fast: 0.16s;
+  --hs-mid: 0.32s;
+  --hs-slow: 0.6s;
+
+  --hs-drift: 34s;
+  --hs-spin: 10s;
+  --hs-flow: 9s;
+}
+
+/* ── Role identities ───────────────────────────────────────────────────
+   One dominant hue per role, deep and saturated rather than neon. Applied
+   via `data-hs-role` on each layout's root.
+   ---------------------------------------------------------------------- */
+
+/* Landing, login and signup all render under role="brand" — this is the
+   violet/purple identity for those three surfaces specifically. Dashboards
+   keep their own distinct hues below, untouched. */
+[data-hs-role="brand"] {
+  --hs-a1: #6d28d9;
+  --hs-a2: #8b5cf6;
+  --hs-a3: #b39ffb;
+  --hs-a1-rgb: 109, 40, 217;
+  --hs-a2-rgb: 139, 92, 246;
+  --hs-a3-rgb: 179, 159, 251;
+}
+
+[data-hs-role="candidate"] {
+  --hs-a1: #4a3cd1;
+  --hs-a2: #5b4de6;
+  --hs-a3: #6f5ef2;
+  --hs-a1-rgb: 74, 60, 209;
+  --hs-a2-rgb: 91, 77, 230;
+  --hs-a3-rgb: 111, 94, 242;
+}
+
+[data-hs-role="recruiter"] {
+  --hs-a1: #a3641c;
+  --hs-a2: #c47c26;
+  --hs-a3: #db9236;
+  --hs-a1-rgb: 163, 100, 28;
+  --hs-a2-rgb: 196, 124, 38;
+  --hs-a3-rgb: 219, 146, 54;
+}
+
+[data-hs-role="tpo"] {
+  --hs-a1: #106e68;
+  --hs-a2: #158a81;
+  --hs-a3: #1ea79a;
+  --hs-a1-rgb: 16, 110, 104;
+  --hs-a2-rgb: 21, 138, 129;
+  --hs-a3-rgb: 30, 167, 154;
+}
+
+[data-hs-role="admin"] {
+  --hs-a1: #157551;
+  --hs-a2: #1b9264;
+  --hs-a3: #23ad78;
+  --hs-a1-rgb: 21, 117, 81;
+  --hs-a2-rgb: 27, 146, 100;
+  --hs-a3-rgb: 35, 173, 120;
+}

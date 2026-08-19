@@ -1,18 +1,24 @@
 // src/components/common/Topbar.jsx
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { LogOut } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
+import UserMenu from "./UserMenu";
+import LiveBadge from "../fx/LiveBadge";
+import Logo from "./Logo";
 
+/**
+ * Admin top bar. Alongside the page title it runs a live clock, which keeps a
+ * visible tick going on even the quietest admin screen.
+ */
 const Topbar = ({ title }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [now, setNow] = useState(() => new Date());
 
-  const initials = (user?.name || "?")
-    .split(" ")
-    .map((p) => p[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(t);
+  }, []);
 
   const handleLogout = async () => {
     await logout();
@@ -22,57 +28,51 @@ const Topbar = ({ title }) => {
   return (
     <header
       style={{
+        position: "sticky",
+        top: 0,
+        zIndex: 40,
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        padding: "22px 32px",
-        borderBottom: "1px solid rgba(255,255,255,0.08)",
-        background: "#0a0e1a",
+        gap: "16px",
+        padding: "14px 26px",
+        borderBottom: "1px solid var(--hs-line)",
+        background: "rgba(6,6,7,0.82)",
+        backdropFilter: "blur(18px)",
+        WebkitBackdropFilter: "blur(18px)",
       }}
     >
-      <h1 style={{ margin: 0, fontSize: "22px", fontWeight: 800, color: "#fff" }}>{title}</h1>
+      <div className="md:hidden">
+        <Logo size="sm" />
+      </div>
 
-      <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <div
-            style={{
-              width: "34px",
-              height: "34px",
-              borderRadius: "50%",
-              background: "linear-gradient(135deg,#6366f1,#22d3ee)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: "13px",
-              fontWeight: 700,
-              color: "#fff",
-            }}
-          >
-            {initials}
-          </div>
-          <span style={{ fontSize: "14px", color: "#e2e8f0", fontWeight: 600 }}>{user?.name}</span>
-        </div>
-
-        <button
-          onClick={handleLogout}
+      <div className="hidden md:flex" style={{ alignItems: "center", gap: "14px", minWidth: 0 }}>
+        <h1
           style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            border: "1px solid rgba(255,255,255,0.12)",
-            background: "transparent",
-            color: "#fff",
-            padding: "9px 18px",
-            borderRadius: "999px",
-            fontSize: "13px",
-            fontWeight: 600,
-            cursor: "pointer",
+            margin: 0,
+            fontSize: "19px",
+            fontWeight: 800,
+            color: "var(--hs-text)",
+            whiteSpace: "nowrap",
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.08)")}
-          onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
         >
-          <LogOut size={15} /> Logout
-        </button>
+          {title}
+        </h1>
+        <LiveBadge label="MONITORING" />
+        <span
+          style={{
+            fontSize: "12.5px",
+            color: "var(--hs-dim)",
+            fontVariantNumeric: "tabular-nums",
+            fontWeight: 600,
+          }}
+        >
+          {now.toLocaleTimeString()}
+        </span>
+      </div>
+
+      <div style={{ marginLeft: "auto" }}>
+        <UserMenu user={user} roleLabel="Administrator" onLogout={handleLogout} />
       </div>
     </header>
   );
